@@ -1,0 +1,4 @@
+owner: ${{ github.repository_owner }}
+git-base-url: https://api.github.com/
+package-path: .cr-release-packages
+index-path: .cr-index
