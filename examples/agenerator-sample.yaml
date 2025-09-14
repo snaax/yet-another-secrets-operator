@@ -1,0 +1,23 @@
+apiVersion: yet-another-secrets.io/v1alpha1
+kind: AGenerator
+metadata:
+  name: password-generator
+spec:
+  length: 16
+  includeUppercase: true
+  includeLowercase: true
+  includeNumbers: true
+  includeSpecialChars: true
+
+---
+apiVersion: yet-another-secrets.io/v1alpha1
+kind: AGenerator
+metadata:
+  name: strong-password-generator
+spec:
+  length: 32
+  includeUppercase: true
+  includeLowercase: true
+  includeNumbers: true
+  includeSpecialChars: true
+  specialChars: "!@#$%^&*()-_=+[]"

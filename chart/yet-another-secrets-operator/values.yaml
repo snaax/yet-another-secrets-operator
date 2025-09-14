@@ -1,0 +1,89 @@
+# Default values for another-secrets-operator.
+# This is a YAML-formatted file.
+#
+# IMPORTANT: All available configuration options are documented in this file.
+# Any changes to the deployment should be made through values overrides.
+
+# The container image to use for the operator
+image:
+  repository: docker.io/phuault/yet-another-secrets-operator:0.1.0
+  tag: latest
+  pullPolicy: IfNotPresent
+  # Optional image pull secrets
+  pullSecrets: []  # e.g. ["regcred"]
+
+# Number of replicas to deploy
+replicaCount: 1
+
+# Namespace to install the operator in
+namespace: yet-another-secret
+
+# Service account configuration
+serviceAccount:
+  # Name of the service account to use
+  name: another-secrets-operator
+
+# AWS configuration
+aws:
+  # AWS region to use (will use the Pod's environment if not specified)
+  region: ""
+
+# Pod resources
+resources:
+  limits:
+    cpu: 500m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 64Mi
+
+# Health probe configuration
+probe:
+  liveness:
+    initialDelaySeconds: 15
+    periodSeconds: 20
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+# Ports configuration
+ports:
+  healthProbe: 8081
+  metrics: 8080
+
+# Create CRDs as part of the release
+installCRDs: true
+
+# Node selector for the operator pods
+nodeSelector: {}
+
+# Tolerations for the operator pods
+tolerations: []
+
+# Affinity for the operator pods
+affinity: {}
+
+# Leader election configuration
+leaderElection:
+  enabled: true
+  # Optional ID to use for leader election
+  id: "aso.yet-another-secrets.io"
+
+# Additional environment variables to set in the container
+extraEnv: []
+  # - name: AWS_ENDPOINT_URL
+  #   value: "https://secretsmanager.us-west-2.amazonaws.com"
+
+# PodSecurityContext defines the pod's security context
+podSecurityContext:
+  runAsNonRoot: true
+  # runAsUser: 65532
+  # fsGroup: 65532
+
+# Container security context
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  # readOnlyRootFilesystem: true

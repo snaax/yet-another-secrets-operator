@@ -1,0 +1,6 @@
+apiVersion: v2
+name: yet-another-secrets-operator
+description: A Kubernetes operator for managing secrets between Kubernetes and AWS SecretsManager
+type: application
+version: 0.1.0
+appVersion: 0.1.0
