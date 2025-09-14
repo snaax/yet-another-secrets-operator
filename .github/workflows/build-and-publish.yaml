@@ -113,26 +113,18 @@ jobs:
           helm package chart/yet-another-secrets-operator --destination .cr-release-packages
 
       # Publish Helm chart to GHCR
-      - name: Publish Helm chart
-        uses: helm/chart-releaser-action@v1.5.0
-        with:
-          charts_dir: chart
-          config: .github/cr.yaml
-        env:
-          CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CR_SKIP_EXISTING: "true"
-
-      # Create chart repository index and upload to Pages
-      - name: Create chart repository
+      - name: Create and publish Helm repository
         run: |
+          # Create index file
           helm repo index .cr-release-packages --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/charts
-          mkdir -p .cr-index
-          mv .cr-release-packages/index.yaml .cr-index/index.yaml
-
-      # Deploy to GitHub Pages
+          
+          # Deploy to GitHub Pages
+          mkdir -p public/charts
+          cp .cr-release-packages/*.tgz public/charts/
+          cp .cr-release-packages/index.yaml public/charts/
+          
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .cr-index
-          destination_dir: charts
+          publish_dir: ./public
