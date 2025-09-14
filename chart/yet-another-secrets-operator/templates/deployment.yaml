@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "another-secrets-operator.fullname" . }}
-  namespace: {{ include "another-secrets-operator.namespace" . }}
+  name: {{ include "yet-another-secrets-operator.fullname" . }}
+  namespace: {{ include "yet-another-secrets-operator.namespace" . }}
   labels:
-    {{- include "another-secrets-operator.labels" . | nindent 4 }}
+    {{- include "yet-another-secrets-operator.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "another-secrets-operator.selectorLabels" . | nindent 6 }}
+      {{- include "yet-another-secrets-operator.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "another-secrets-operator.selectorLabels" . | nindent 8 }}
+        {{- include "yet-another-secrets-operator.selectorLabels" . | nindent 8 }}
       annotations:
         kubectl.kubernetes.io/default-container: another-secrets-operator
     spec:
-      serviceAccountName: {{ include "another-secrets-operator.serviceAccountName" . }}
+      serviceAccountName: {{ include "yet-another-secrets-operator.serviceAccountName" . }}
       {{- with .Values.image.pullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}

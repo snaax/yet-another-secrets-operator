@@ -1,6 +1,6 @@
 Thank you for installing {{ .Chart.Name }} version {{ .Chart.Version }}.
 
-The Another Secrets Operator has been deployed to your cluster in the {{ include "another-secrets-operator.namespace" . }} namespace.
+The Another Secrets Operator has been deployed to your cluster in the {{ include "yet-another-secrets-operator.namespace" . }} namespace.
 
 ## Next Steps
 
@@ -41,7 +41,7 @@ The Another Secrets Operator has been deployed to your cluster in the {{ include
 3. Verify the operator created your secret:
 
    ```bash
-   kubectl get secret my-app-secret -n {{ include "another-secrets-operator.namespace" . }}
+   kubectl get secret my-app-secret -n {{ include "yet-another-secrets-operator.namespace" . }}
    ```
 
 
@@ -50,7 +50,7 @@ NOTE: Before using the operator, make sure Pod Identity is configured for your E
 ```bash
 aws eks create-pod-identity-association \
     --cluster-name <your-cluster-name> \
-    --namespace {{ include "another-secrets-operator.namespace" . }} \
-    --service-account {{ include "another-secrets-operator.serviceAccountName" . }} \
+    --namespace {{ include "yet-another-secrets-operator.namespace" . }} \
+    --service-account {{ include "yet-another-secrets-operator.serviceAccountName" . }} \
     --role-arn <your-role-arn>
 ```

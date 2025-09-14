@@ -2,9 +2,9 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "another-secrets-operator.fullname" . }}-role
+  name: {{ include "yet-another-secrets-operator.fullname" . }}-role
   labels:
-    {{- include "another-secrets-operator.labels" . | nindent 4 }}
+    {{- include "yet-another-secrets-operator.labels" . | nindent 4 }}
 rules:
 - apiGroups:
   - yet-another-secrets.io
@@ -91,14 +91,14 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "another-secrets-operator.fullname" . }}-rolebinding
+  name: {{ include "yet-another-secrets-operator.fullname" . }}-rolebinding
   labels:
-    {{- include "another-secrets-operator.labels" . | nindent 4 }}
+    {{- include "yet-another-secrets-operator.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "another-secrets-operator.fullname" . }}-role
+  name: {{ include "yet-another-secrets-operator.fullname" . }}-role
 subjects:
 - kind: ServiceAccount
-  name: {{ include "another-secrets-operator.serviceAccountName" . }}
-  namespace: {{ include "another-secrets-operator.namespace" . }}
+  name: {{ include "yet-another-secrets-operator.serviceAccountName" . }}
+  namespace: {{ include "yet-another-secrets-operator.namespace" . }}
