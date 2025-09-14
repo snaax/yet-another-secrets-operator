@@ -26,7 +26,7 @@ The Another Secrets Operator has been deployed to your cluster in the {{ include
    kind: ASecret
    metadata:
      name: example-secret
-     namespace: {{ include "another-secrets-operator.namespace" . }}
+     namespace: {{ include "yet-another-secrets-operator.namespace" . }}
    spec:
      targetSecretName: my-app-secret
      awsSecretPath: /path/to/aws/secret

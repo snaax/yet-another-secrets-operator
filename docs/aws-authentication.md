@@ -92,7 +92,7 @@ aws iam attach-role-policy \
 # Create the Pod Identity Association
 aws eks create-pod-identity-association \
     --cluster-name <your-cluster-name> \
-    --namespace yet-another-secret \
+    --namespace yaso \
     --service-account another-secrets-operator \
     --role-arn arn:aws:iam::<ACCOUNT-ID>:role/another-secrets-operator-role
 ```

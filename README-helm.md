@@ -55,7 +55,7 @@ The following table lists the configurable parameters of the Another Secrets Ope
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `image.pullSecrets` | List of image pull secrets | `[]` |
 | `replicaCount` | Number of operator replicas | `1` |
-| `namespace` | Namespace to install the operator | `yet-another-secret` |
+| `namespace` | Namespace to install the operator | `yaso` |
 | `serviceAccount.name` | Name of the service account | `another-secrets-operator` |
 
 | `aws.region` | AWS region to use | `""` (uses Pod's environment) |
@@ -86,7 +86,7 @@ Before installing the chart, set up EKS Pod Identity using the AWS CLI:
 ```bash
 aws eks create-pod-identity-association \
     --cluster-name your-eks-cluster \
-    --namespace yet-another-secret \
+    --namespace yaso \
     --service-account another-secrets-operator \
     --role-arn arn:aws:iam::123456789012:role/another-secrets-operator-role
 ```
@@ -134,7 +134,7 @@ apiVersion: yet-another-secrets.io/v1alpha1
 kind: ASecret
 metadata:
   name: my-app-secret
-  namespace: yet-another-secret
+  namespace: yaso
 spec:
   targetSecretName: app-credentials
   awsSecretPath: /my-app/secrets

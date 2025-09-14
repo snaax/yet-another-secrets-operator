@@ -34,7 +34,7 @@ EKS Pod Identity is the newer AWS solution that replaces IRSA for EKS authentica
 # Create the association
 aws eks create-pod-identity-association \
     --cluster-name <your-cluster-name> \
-    --namespace system \
+    --namespace yaso \
     --service-account controller-manager \
     --role-arn arn:aws:iam::<ACCOUNT-ID>:role/another-secrets-operator-role
 ```
@@ -46,7 +46,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: controller-manager
-  namespace: system
+  namespace: yaso
   # No annotations needed for Pod Identity
 ```
 
@@ -74,7 +74,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: controller-manager
-  namespace: system
+  namespace: yaso
   annotations:
     eks.amazonaws.com/role-arn: arn:aws:iam::<ACCOUNT-ID>:role/another-secrets-operator-role
 ```

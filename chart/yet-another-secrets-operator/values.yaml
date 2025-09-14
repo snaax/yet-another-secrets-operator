@@ -16,7 +16,7 @@ image:
 replicaCount: 1
 
 # Namespace to install the operator in
-namespace: yet-another-secret
+namespace: yaso
 
 # Service account configuration
 serviceAccount:
