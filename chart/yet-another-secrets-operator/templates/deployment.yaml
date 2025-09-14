@@ -35,7 +35,6 @@ spec:
             - --metrics-bind-address=:{{ .Values.ports.metrics }}
             {{- if .Values.leaderElection.enabled }}
             - --leader-elect=true
-            - --leader-election-id={{ .Values.leaderElection.id }}
             {{- end }}
           env:
             {{- if .Values.aws.region }}
