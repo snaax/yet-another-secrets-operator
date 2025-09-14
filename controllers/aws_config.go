@@ -1,74 +1,86 @@
 package controllers
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"context"
+	"fmt"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/go-logr/logr"
 )
 
-// AWSConfig holds AWS configuration for the operator
-type AWSConfig struct {
+// AWSConfigV2 holds AWS configuration for the operator using SDK v2
+type AWSConfigV2 struct {
 	Region      string
 	EndpointURL string
 	MaxRetries  int
 }
 
-// NewAWSConfig creates a new AWS configuration with default values
-func NewAWSConfig() *AWSConfig {
-	return &AWSConfig{
+// NewAWSConfigV2 creates a new AWS configuration with default values
+func NewAWSConfigV2() *AWSConfigV2 {
+	return &AWSConfigV2{
 		Region:     "", // Empty means use the default from environment or instance metadata
 		MaxRetries: 5,
 	}
 }
 
-// CreateSecretsManagerClient creates a new AWS SecretsManager client
-func (c *AWSConfig) CreateSecretsManagerClient(log logr.Logger) (*secretsmanager.SecretsManager, error) {
-	// Create AWS config with optional settings
-	awsConfig := aws.NewConfig()
+// CreateSecretsManagerClient creates a new AWS SecretsManager client using SDK v2
+func (c *AWSConfigV2) CreateSecretsManagerClient(ctx context.Context, log logr.Logger) (*secretsmanager.Client, error) {
+	// Create options for AWS config
+	optFns := []func(*config.LoadOptions) error{
+		config.WithRetryMaxAttempts(c.MaxRetries),
+	}
 
 	// Set region if specified
 	if c.Region != "" {
-		awsConfig.WithRegion(c.Region)
+		optFns = append(optFns, config.WithRegion(c.Region))
 	}
 
-	// Set custom endpoint if specified (useful for testing or non-standard endpoints)
+	// Set custom endpoint URL if specified
 	if c.EndpointURL != "" {
-		awsConfig.WithEndpoint(c.EndpointURL)
+		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+			if service == secretsmanager.ServiceID {
+				return aws.Endpoint{
+					URL:           c.EndpointURL,
+					SigningRegion: region,
+				}, nil
+			}
+			// Fallback to default resolver
+			return aws.Endpoint{}, fmt.Errorf("unknown endpoint requested")
+		})
+		optFns = append(optFns, config.WithEndpointResolverWithOptions(customResolver))
 	}
 
-	// Set max retries
-	awsConfig.WithMaxRetries(c.MaxRetries)
-
-	// Create session using the default credential provider chain
-	// This will automatically use:
-	// 1. Environment variables
-	// 2. Shared credentials file
-	// 3. EKS Pod Identity or IAM Roles for Service Accounts
-	// 4. EC2 Instance Profile
-	sess, err := session.NewSession(awsConfig)
+	// Load the configuration with options
+	log.Info("Creating AWS SDK v2 config")
+	cfg, err := config.LoadDefaultConfig(ctx, optFns...)
 	if err != nil {
-		log.Error(err, "Failed to create AWS session")
+		log.Error(err, "Failed to load AWS SDK v2 configuration")
 		return nil, err
 	}
 
-	// Create and return the SecretsManager client
-	return secretsmanager.New(sess), nil
+	// Log information about which provider was used (for debugging)
+	log.Info("AWS SDK v2 configuration created successfully")
+
+	// Return a new SecretsManager client
+	return secretsmanager.NewFromConfig(cfg), nil
 }
 
-// GetCredentialProviderInfo returns information about which credential provider was used
-func (c *AWSConfig) GetCredentialProviderInfo(log logr.Logger) (string, error) {
-	sess, err := session.NewSession()
+// GetCredentialProviderInfo returns information about which credential provider was used (if available)
+func (c *AWSConfigV2) GetCredentialProviderInfo(ctx context.Context, log logr.Logger) (string, error) {
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		log.Error(err, "Failed to create AWS session for credential check")
+		log.Error(err, "Failed to load AWS configuration for credential check")
 		return "", err
 	}
 
-	creds, err := sess.Config.Credentials.Get()
+	// In SDK v2, getting detailed provider info requires checking the credentials directly
+	_, err = cfg.Credentials.Retrieve(ctx)
 	if err != nil {
-		log.Error(err, "Failed to get AWS credentials info")
 		return "", err
 	}
 
-	return creds.ProviderName, nil
+	// We don't get the same level of provider detail in SDK v2
+	return "AWS SDK v2 Credentials", nil
 }

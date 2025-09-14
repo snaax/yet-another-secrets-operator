@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -16,6 +14,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 
 	secretsv1alpha1 "github.com/example/another-secrets-operator/api/v1alpha1"
 )
@@ -49,18 +51,18 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	// Initialize AWS client using the AWS configuration
-	awsConfig := NewAWSConfig()
+	// Initialize AWS client using the AWS v2 configuration
+	awsConfig := NewAWSConfigV2()
 	// AWS region can be overridden with environment variable AWS_REGION
 
-	smClient, err := awsConfig.CreateSecretsManagerClient(log)
+	smClient, err := awsConfig.CreateSecretsManagerClient(ctx, log)
 	if err != nil {
 		log.Error(err, "Failed to create AWS SecretsManager client")
 		return ctrl.Result{}, err
 	}
 
 	// Log which credential provider is being used (useful for debugging)
-	if providerName, err := awsConfig.GetCredentialProviderInfo(log); err == nil {
+	if providerName, err := awsConfig.GetCredentialProviderInfo(ctx, log); err == nil {
 		log.Info("AWS credential provider", "provider", providerName)
 	}
 
@@ -170,16 +172,17 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	return ctrl.Result{RequeueAfter: time.Hour}, nil
 }
 
-// getAwsSecret gets a secret from AWS SecretsManager
-func (r *ASecretReconciler) getAwsSecret(ctx context.Context, smClient *secretsmanager.SecretsManager, secretPath string, log logr.Logger) (map[string]string, bool, error) {
+// getAwsSecret gets a secret from AWS SecretsManager using SDK v2
+func (r *ASecretReconciler) getAwsSecret(ctx context.Context, smClient *secretsmanager.Client, secretPath string, log logr.Logger) (map[string]string, bool, error) {
 	input := &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretPath),
 	}
 
-	result, err := smClient.GetSecretValue(input)
+	result, err := smClient.GetSecretValue(ctx, input)
 	if err != nil {
 		// Check if the error is because the secret doesn't exist
-		if _, ok := err.(*secretsmanager.ResourceNotFoundException); ok {
+		var resourceNotFoundException *types.ResourceNotFoundException
+		if aws.IsErrorType[*types.ResourceNotFoundException](err, &resourceNotFoundException) {
 			return nil, false, nil
 		}
 		return nil, false, err
@@ -194,8 +197,8 @@ func (r *ASecretReconciler) getAwsSecret(ctx context.Context, smClient *secretsm
 	return secretData, true, nil
 }
 
-// createOrUpdateAwsSecret creates or updates a secret in AWS SecretsManager
-func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClient *secretsmanager.SecretsManager, secretPath string, data map[string][]byte, log logr.Logger) error {
+// createOrUpdateAwsSecret creates or updates a secret in AWS SecretsManager using SDK v2
+func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClient *secretsmanager.Client, secretPath string, data map[string][]byte, log logr.Logger) error {
 	// Convert binary data to string
 	stringData := make(map[string]string)
 	for k, v := range data {
@@ -208,14 +211,15 @@ func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClien
 	}
 
 	// Check if secret exists
-	_, err = smClient.DescribeSecret(&secretsmanager.DescribeSecretInput{
+	_, err = smClient.DescribeSecret(ctx, &secretsmanager.DescribeSecretInput{
 		SecretId: aws.String(secretPath),
 	})
 
 	if err != nil {
 		// Create new secret if it doesn't exist
-		if _, ok := err.(*secretsmanager.ResourceNotFoundException); ok {
-			_, err = smClient.CreateSecret(&secretsmanager.CreateSecretInput{
+		var resourceNotFoundException *types.ResourceNotFoundException
+		if aws.IsErrorType[*types.ResourceNotFoundException](err, &resourceNotFoundException) {
+			_, err = smClient.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
 				Name:         aws.String(secretPath),
 				SecretString: aws.String(string(secretString)),
 			})
@@ -225,7 +229,7 @@ func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClien
 	}
 
 	// Update existing secret
-	_, err = smClient.PutSecretValue(&secretsmanager.PutSecretValueInput{
+	_, err = smClient.PutSecretValue(ctx, &secretsmanager.PutSecretValueInput{
 		SecretId:     aws.String(secretPath),
 		SecretString: aws.String(string(secretString)),
 	})
