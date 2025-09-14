@@ -6,7 +6,7 @@
 
 # The container image to use for the operator
 image:
-  repository: docker.io/phuault/yet-another-secrets-operator:0.1.0
+  repository: ghcr.io/snaax/yet-another-secrets-operator:0.1.0
   tag: latest
   pullPolicy: IfNotPresent
   # Optional image pull secrets

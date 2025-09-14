@@ -49,8 +49,9 @@ jobs:
       - name: Extract chart version
         id: chart_version
         run: |
-          VERSION=$(grep 'version:' chart/another-secrets-operator/Chart.yaml | awk '{print $2}')
-          APP_VERSION=$(grep 'appVersion:' chart/another-secrets-operator/Chart.yaml | awk '{print $2}')
+          VERSION=$(grep 'version:' chart/yet-another-secrets-operator/Chart.yaml | awk '{print $2}')
+          APP_VERSION=$(grep 'appVersion:' chart/yet-another-secrets-operator/Chart.yaml | awk '{print $2}')
+          
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "app_version=${APP_VERSION}" >> $GITHUB_OUTPUT
           
@@ -96,20 +97,20 @@ jobs:
       - name: Update Helm chart values
         run: |
           # Update values.yaml with the correct image reference
-          sed -i "s|repository: example/another-secrets-operator|repository: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}|g" chart/another-secrets-operator/values.yaml
-          sed -i "s|tag: latest|tag: ${{ steps.chart_version.outputs.app_version }}|g" chart/another-secrets-operator/values.yaml
+          sed -i "s|repository: example/another-secrets-operator|repository: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}|g" chart/yet-another-secrets-operator/values.yaml
+          sed -i "s|tag: latest|tag: ${{ steps.chart_version.outputs.app_version }}|g" chart/yet-another-secrets-operator/values.yaml
           
           # Update chart version if this is a tag push
           if [[ $GITHUB_REF == refs/tags/v* ]]; then
-            sed -i "s|version: .*|version: ${{ steps.chart_version.outputs.version }}|g" chart/another-secrets-operator/Chart.yaml
-            sed -i "s|appVersion: .*|appVersion: ${{ steps.chart_version.outputs.app_version }}|g" chart/another-secrets-operator/Chart.yaml
+            sed -i "s|version: .*|version: ${{ steps.chart_version.outputs.version }}|g" chart/yet-another-secrets-operator/Chart.yaml
+            sed -i "s|appVersion: .*|appVersion: ${{ steps.chart_version.outputs.app_version }}|g" chart/yet-another-secrets-operator/Chart.yaml
           fi
 
       # Package Helm chart
       - name: Package Helm chart
         run: |
           mkdir -p .cr-release-packages
-          helm package chart/another-secrets-operator --destination .cr-release-packages
+          helm package chart/yet-another-secrets-operator --destination .cr-release-packages
 
       # Publish Helm chart to GHCR
       - name: Publish Helm chart
