@@ -11,7 +11,7 @@ spec:
     kind: ASecret
     listKind: ASecretList
     plural: asecrets
-    shortName:
+    shortNames:
     - asec
     singular: asecret
   scope: Namespaced
@@ -173,7 +173,7 @@ spec:
     kind: AGenerator
     listKind: AGeneratorList
     plural: agenerators
-    shortName:
+    shortNames:
     - agen
     singular: agenerator
   scope: Cluster

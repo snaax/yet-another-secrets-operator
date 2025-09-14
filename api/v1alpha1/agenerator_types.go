@@ -46,7 +46,7 @@ type AGeneratorStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:resource:path=agenerators,scope=Cluster,shortName=agen
+//+kubebuilder:resource:path=agenerators,scope=Cluster,shortNames=agen
 
 // AGenerator is the Schema for the agenerators API
 type AGenerator struct {
