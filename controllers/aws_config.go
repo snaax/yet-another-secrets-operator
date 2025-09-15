@@ -1,9 +1,6 @@
 package controllers
 
 import (
-	"net/http"
-	"time"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
@@ -27,23 +24,32 @@ func NewAWSConfig() *AWSConfig {
 
 // CreateSecretsManagerClient creates a new AWS SecretsManager client
 func (c *AWSConfig) CreateSecretsManagerClient(log logr.Logger) (*secretsmanager.SecretsManager, error) {
-	// Create a custom HTTP client that allows non-localhost endpoints for EKS Pod Identity
-	httpClient := &http.Client{
-		Timeout: time.Second * 30,
-	}
-
-	// Create AWS config
-	awsConfig := &aws.Config{
-		HTTPClient: httpClient,
-		MaxRetries: aws.Int(c.MaxRetries),
-	}
+	// Create AWS config with optional settings
+	awsConfig := aws.NewConfig()
 
 	// Set region if specified
 	if c.Region != "" {
-		awsConfig.Region = aws.String(c.Region)
+		awsConfig.WithRegion(c.Region)
 	}
 
-	// Create session
+	// Set custom endpoint if specified (useful for testing or non-standard endpoints)
+	if c.EndpointURL != "" {
+		awsConfig.WithEndpoint(c.EndpointURL)
+	}
+
+	// Set max retries
+	awsConfig.WithMaxRetries(c.MaxRetries)
+
+	// Enable EC2 metadata service by setting EC2MetadataDisableTimeoutOverride to true
+	// This allows the SDK to connect to the EC2 metadata service
+	awsConfig.WithEC2MetadataDisableTimeoutOverride(true)
+
+	// Create session using the default credential provider chain
+	// This will automatically use:
+	// 1. Environment variables
+	// 2. Shared credentials file
+	// 3. EKS Pod Identity or IAM Roles for Service Accounts
+	// 4. EC2 Instance Profile
 	sess, err := session.NewSession(awsConfig)
 	if err != nil {
 		log.Error(err, "Failed to create AWS session")
@@ -56,7 +62,10 @@ func (c *AWSConfig) CreateSecretsManagerClient(log logr.Logger) (*secretsmanager
 
 // GetCredentialProviderInfo returns information about which credential provider was used
 func (c *AWSConfig) GetCredentialProviderInfo(log logr.Logger) (string, error) {
-	sess, err := session.NewSession()
+	// Create AWS config with the EC2 metadata timeout override disabled
+	awsConfig := aws.NewConfig().WithEC2MetadataDisableTimeoutOverride(true)
+
+	sess, err := session.NewSession(awsConfig)
 	if err != nil {
 		log.Error(err, "Failed to create AWS session for credential check")
 		return "", err
