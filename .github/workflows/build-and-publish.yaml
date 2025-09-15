@@ -31,7 +31,7 @@ jobs:
       # Install controller-gen
       - name: Install controller-gen
         run: |
-          go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.9.2
+          go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.19.0
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       # Generate DeepCopy code
