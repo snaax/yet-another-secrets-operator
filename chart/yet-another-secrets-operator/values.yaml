@@ -25,7 +25,7 @@ serviceAccount:
 
 # AWS configuration
 aws:
-  # AWS region to use (will use the Pod's environment if not specified)
+  endpoint: ""
   region: ""
 
 # Pod resources
