@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors" // Add standard errors package
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -53,7 +55,6 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Initialize AWS client using the AWS configuration
 	awsConfig := NewAWSConfig()
-	// AWS region can be overridden with environment variable AWS_REGION
 
 	smClient, err := awsConfig.CreateSecretsManagerClient(ctx, log)
 	if err != nil {
@@ -64,6 +65,12 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// Log which credential provider is being used (useful for debugging)
 	if providerName, err := awsConfig.GetCredentialProviderInfo(ctx, log); err == nil {
 		log.Info("AWS credential provider", "provider", providerName)
+	}
+
+	// Test AWS connectivity before proceeding
+	if err := awsConfig.TestConnection(ctx, log); err != nil {
+		log.Error(err, "AWS connectivity test failed - check AWS credentials and region configuration")
+		return ctrl.Result{RequeueAfter: time.Minute}, err
 	}
 
 	// Check if the secret exists in AWS SecretsManager
@@ -174,37 +181,51 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 // getAwsSecret gets a secret from AWS SecretsManager
 func (r *ASecretReconciler) getAwsSecret(ctx context.Context, smClient *secretsmanager.Client, secretPath string, log logr.Logger) (map[string]string, bool, error) {
+	// Ensure the secret path is formatted correctly
+	// AWS expects paths to begin with 'secret/' for hierarchical paths in some cases
+	// but we'll use the path as-is and log details if there's a failure
+	secretID := secretPath
+
 	input := &secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(secretPath),
+		SecretId: aws.String(secretID),
 	}
 
-	log.Info("Getting AWS secret", "path", secretPath)
+	log.Info("Getting AWS secret", "path", secretID)
 	result, err := smClient.GetSecretValue(ctx, input)
 	if err != nil {
-		// Check if the error is because the secret doesn't exist
+		// Check if it's a resource not found error
 		var resourceNotFound *smTypes.ResourceNotFoundException
 		if errors.As(err, &resourceNotFound) {
-			log.Info("AWS secret not found", "path", secretPath)
+			log.Info("AWS secret not found", "path", secretID)
 			return nil, false, nil
 		}
 
 		// If it's an endpoint resolution error, log more details
 		if err.Error() == "not found, ResolveEndpointV2" {
-			log.Error(err, "Failed to resolve AWS endpoint - check AWS region configuration")
-			return nil, false, err
+			log.Error(err, "Failed to resolve AWS endpoint - check AWS region and endpoint configuration",
+				"secretPath", secretID,
+				"region", os.Getenv("AWS_REGION"))
+
+			return nil, false, fmt.Errorf("AWS endpoint resolution failed for secret %s: %w", secretID, err)
 		}
 
-		log.Error(err, "Failed to get AWS secret")
+		log.Error(err, "Failed to get AWS secret", "secretPath", secretID)
 		return nil, false, err
 	}
 
+	// Successfully got the secret, now parse it
 	var secretData map[string]string
+	if result.SecretString == nil {
+		log.Error(nil, "AWS secret value is nil", "secretPath", secretID)
+		return nil, true, fmt.Errorf("secret value is nil for %s", secretID)
+	}
+
 	if err := json.Unmarshal([]byte(*result.SecretString), &secretData); err != nil {
-		log.Error(err, "Failed to unmarshal AWS secret")
+		log.Error(err, "Failed to unmarshal AWS secret", "secretPath", secretID)
 		return nil, true, err
 	}
 
-	log.Info("Successfully retrieved AWS secret", "path", secretPath)
+	log.Info("Successfully retrieved AWS secret", "path", secretID, "keys", len(secretData))
 	return secretData, true, nil
 }
 

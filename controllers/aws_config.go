@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -27,45 +28,27 @@ func NewAWSConfig() *AWSConfig {
 
 // CreateSecretsManagerClient creates a new AWS SecretsManager client
 func (c *AWSConfig) CreateSecretsManagerClient(ctx context.Context, log logr.Logger) (*secretsmanager.Client, error) {
-	// Create AWS SDK v2 config options
+	// Determine the region to use
+	region := c.Region
+	if region == "" {
+		region = getDefaultRegion()
+	}
+
+	// If we still don't have a region, use a default one for fallback
+	if region == "" {
+		region = "us-east-1" // Use a default region as fallback
+		log.Info("No AWS region specified, using default fallback", "region", region)
+	} else {
+		log.Info("Using AWS region", "region", region)
+	}
+
+	// Create basic config options
 	opts := []func(*config.LoadOptions) error{
+		config.WithRegion(region),
 		config.WithRetryMaxAttempts(c.MaxRetries),
 	}
 
-	// Set region if specified
-	if c.Region != "" {
-		log.Info("Using specified AWS region", "region", c.Region)
-		opts = append(opts, config.WithRegion(c.Region))
-	} else {
-		// Try to get region from environment variables
-		region := getDefaultRegion()
-		if region != "" {
-			log.Info("Using AWS region from environment", "region", region)
-			opts = append(opts, config.WithRegion(region))
-		} else {
-			log.Info("No AWS region specified, will attempt to use instance metadata")
-		}
-	}
-
-	// Set custom endpoint if specified (useful for testing or non-standard endpoints)
-	if c.EndpointURL != "" {
-		log.Info("Using custom AWS endpoint URL", "endpoint", c.EndpointURL)
-		// Use proper endpoint resolver option
-		opts = append(opts, config.WithEndpointResolverWithOptions(
-			aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-				if service == secretsmanager.ServiceID {
-					return aws.Endpoint{
-						URL:           c.EndpointURL,
-						SigningRegion: region,
-					}, nil
-				}
-				// Fallback to default endpoint resolver
-				return aws.Endpoint{}, &aws.EndpointNotFoundError{}
-			}),
-		))
-	}
-
-	// Load configuration with all credential providers in the chain
+	// Load configuration with explicit region
 	log.Info("Loading AWS configuration")
 	cfg, err := config.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
@@ -73,16 +56,39 @@ func (c *AWSConfig) CreateSecretsManagerClient(ctx context.Context, log logr.Log
 		return nil, err
 	}
 
-	// Log the effective region being used
-	log.Info("AWS configuration loaded", "region", cfg.Region)
+	// Create SecretsManager client options
+	var clientOpts []func(*secretsmanager.Options)
 
-	// Create and return the SecretsManager client
-	return secretsmanager.NewFromConfig(cfg), nil
+	// Set custom endpoint if specified
+	if c.EndpointURL != "" {
+		log.Info("Using custom endpoint URL", "endpoint", c.EndpointURL)
+		clientOpts = append(clientOpts, func(o *secretsmanager.Options) {
+			o.BaseEndpoint = aws.String(c.EndpointURL)
+		})
+	}
+
+	// Create client with the options
+	smClient := secretsmanager.NewFromConfig(cfg, clientOpts...)
+
+	// Log the configured region
+	log.Info("AWS SecretsManager client created", "region", cfg.Region)
+
+	return smClient, nil
 }
 
 // GetCredentialProviderInfo returns information about which credential provider was used
 func (c *AWSConfig) GetCredentialProviderInfo(ctx context.Context, log logr.Logger) (string, error) {
-	cfg, err := config.LoadDefaultConfig(ctx)
+	// Determine the region to use
+	region := c.Region
+	if region == "" {
+		region = getDefaultRegion()
+	}
+
+	if region == "" {
+		region = "us-east-1" // Default fallback
+	}
+
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
 		log.Error(err, "Failed to load AWS config for credential check")
 		return "", err
@@ -107,4 +113,42 @@ func getDefaultRegion() string {
 		}
 	}
 	return ""
+}
+
+// TestConnection attempts to list secrets to verify connectivity
+func (c *AWSConfig) TestConnection(ctx context.Context, log logr.Logger) error {
+	// Determine the region to use
+	region := c.Region
+	if region == "" {
+		region = getDefaultRegion()
+	}
+
+	// Create basic config
+	opts := []func(*config.LoadOptions) error{
+		config.WithRegion(region),
+	}
+
+	log.Info("Testing AWS connectivity", "region", region)
+	cfg, err := config.LoadDefaultConfig(ctx, opts...)
+	if err != nil {
+		log.Error(err, "Failed to load config for connectivity test")
+		return err
+	}
+
+	// Create client
+	client := secretsmanager.NewFromConfig(cfg)
+
+	// Test with ListSecrets which is simpler than GetSecretValue
+	log.Info("Attempting to list secrets to verify connectivity")
+	resp, err := client.ListSecrets(ctx, &secretsmanager.ListSecretsInput{
+		MaxResults: aws.Int32(1), // Only need one to verify connection
+	})
+
+	if err != nil {
+		log.Error(err, "Failed connectivity test")
+		return fmt.Errorf("AWS connectivity test failed: %w", err)
+	}
+
+	log.Info("AWS connectivity test succeeded", "secretCount", len(resp.SecretList))
+	return nil
 }
