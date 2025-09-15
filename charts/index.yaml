@@ -3,13 +3,13 @@ entries:
   yet-another-secrets-operator:
   - apiVersion: v2
     appVersion: 0.1.0
-    created: "2025-09-15T07:07:52.481435276Z"
+    created: "2025-09-15T07:27:14.499311855Z"
     description: A Kubernetes operator for managing secrets between Kubernetes and
       AWS SecretsManager
-    digest: 7b23aac954e17b64d3c3313753f1768dd67f858733cf6bb1e6ac074969ab47b7
+    digest: 00ae8ea2e30803b74f6954575073058b79b53add96bd1be8e864f3f9acc55941
     name: yet-another-secrets-operator
     type: application
     urls:
     - https://snaax.github.io/yet-another-secrets-operator/charts/yet-another-secrets-operator-0.1.0.tgz
     version: 0.1.0
-generated: "2025-09-15T07:07:52.480842381Z"
+generated: "2025-09-15T07:27:14.498752044Z"
