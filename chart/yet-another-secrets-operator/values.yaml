@@ -26,6 +26,7 @@ serviceAccount:
 # AWS configuration
 aws:
   region: ""
+  removeRemoteKeys: true
   # tags:
   #   managed-by: yaso
 

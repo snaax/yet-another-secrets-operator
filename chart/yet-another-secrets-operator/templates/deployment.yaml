@@ -36,6 +36,7 @@ spec:
             {{- if .Values.aws.region }}
             - --aws-region={{ .Values.aws.region }}
             {{- end }}
+            - --remove-remote-keys={{ .Values.aws.removeRemoteKeys }}
             {{- if .Values.leaderElection.enabled }}
             - --leader-elect=true
             {{- end }}

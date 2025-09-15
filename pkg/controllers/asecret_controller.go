@@ -113,23 +113,25 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
-	// Track which keys are managed by this ASecret CR
-	managedKeys := make(map[string]bool)
-	for key := range aSecret.Spec.Data {
-		managedKeys[key] = true
-	}
-
-	// Remove keys that are no longer in the ASecret spec (pruning)
-	keysToDelete := []string{}
-	for k := range secretData {
-		if !managedKeys[k] {
-			keysToDelete = append(keysToDelete, k)
+	if awsClient.Config.RemoveRemoteKeys {
+		// Track which keys are managed by this ASecret CR
+		managedKeys := make(map[string]bool)
+		for key := range aSecret.Spec.Data {
+			managedKeys[key] = true
 		}
-	}
 
-	// Remove the keys marked for deletion
-	for _, k := range keysToDelete {
-		delete(secretData, k)
+		// Remove keys that are no longer in the ASecret spec (pruning)
+		keysToDelete := []string{}
+		for k := range secretData {
+			if !managedKeys[k] {
+				keysToDelete = append(keysToDelete, k)
+			}
+		}
+
+		// Remove the keys marked for deletion
+		for _, k := range keysToDelete {
+			delete(secretData, k)
+		}
 	}
 
 	// Process ASecret data specifications (last source of truth)

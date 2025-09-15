@@ -16,10 +16,11 @@ type OperatorConfig struct {
 
 // AWSConfig holds AWS-specific configuration
 type AWSConfig struct {
-	Region      string
-	EndpointURL string
-	MaxRetries  int
-	Tags        map[string]string
+	Region           string
+	EndpointURL      string
+	MaxRetries       int
+	RemoveRemoteKeys bool
+	Tags             map[string]string
 }
 
 // HealthConfig holds health server configuration
@@ -42,10 +43,11 @@ func NewDefaultConfig() *OperatorConfig {
 
 	return &OperatorConfig{
 		AWS: AWSConfig{
-			Region:      "",
-			EndpointURL: "",
-			MaxRetries:  5,
-			Tags:        defaultTags,
+			Region:           "",
+			EndpointURL:      "",
+			MaxRetries:       5,
+			RemoveRemoteKeys: true,
+			Tags:             defaultTags,
 		},
 		Health: HealthConfig{
 			ProbeBindAddress:   ":8081",
@@ -64,6 +66,7 @@ func (c *OperatorConfig) AddFlags(flags *pflag.FlagSet) {
 	flags.StringVar(&c.AWS.Region, "aws-region", c.AWS.Region, "AWS Region to use")
 	flags.StringVar(&c.AWS.EndpointURL, "aws-endpoint", c.AWS.EndpointURL, "Custom AWS endpoint URL")
 	flags.IntVar(&c.AWS.MaxRetries, "aws-max-retries", c.AWS.MaxRetries, "Maximum number of AWS API retries")
+	flags.BoolVar(&c.AWS.RemoveRemoteKeys, "remove-remote-keys", c.AWS.RemoveRemoteKeys, "Remove remote keys if they don't exist in the CR.")
 
 	// Health and metrics flags
 	flags.StringVar(&c.Health.ProbeBindAddress, "health-probe-bind-address", c.Health.ProbeBindAddress, "The address the probe endpoint binds to.")
@@ -111,9 +114,10 @@ func GetDefaultRegion() string {
 // ToAWSConfig converts the config to a format usable by controllers
 func (c *OperatorConfig) ToAWSConfig() AWSConfig {
 	return AWSConfig{
-		Region:      c.AWS.Region,
-		EndpointURL: c.AWS.EndpointURL,
-		MaxRetries:  c.AWS.MaxRetries,
-		Tags:        c.AWS.Tags,
+		Region:           c.AWS.Region,
+		EndpointURL:      c.AWS.EndpointURL,
+		MaxRetries:       c.AWS.MaxRetries,
+		RemoveRemoteKeys: c.AWS.RemoveRemoteKeys,
+		Tags:             c.AWS.Tags,
 	}
 }
