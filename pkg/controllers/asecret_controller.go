@@ -64,7 +64,7 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Log which credential provider is being used (useful for debugging)
 	if providerName, err := awsClient.GetCredentialProviderInfo(ctx, log); err == nil {
-		log.Info("AWS credential provider", "provider", providerName)
+		log.V(1).Info("AWS credential provider", "provider", providerName)
 	}
 
 	// Check if the secret exists in AWS SecretsManager
@@ -134,7 +134,7 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			log.Error(err, "Failed to create Secret")
 			return ctrl.Result{}, err
 		}
-		log.Info("Created Secret", "name", existingSecret.Name)
+		log.Info("Created Kubernetes Secret", "name", existingSecret.Name)
 	} else {
 		// Update only if there are changes
 		existingSecret.Data = secretData
@@ -142,14 +142,36 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			log.Error(err, "Failed to update Secret")
 			return ctrl.Result{}, err
 		}
-		log.Info("Updated Secret", "name", existingSecret.Name)
+		log.Info("Updated Kubernetes Secret", "name", existingSecret.Name)
 	}
 
-	// If AWS secret doesn't exist, create it with the current data
-	if !awsSecretExists {
-		if err := r.createOrUpdateAwsSecret(ctx, smClient, aSecret.Spec.AwsSecretPath, secretData, log); err != nil {
-			log.Error(err, "Failed to create AWS Secret")
-			return ctrl.Result{}, err
+	if awsSecretExists {
+		needsAwsUpdate := false
+
+		// Check for keys that exist in secretData but not in AWS
+		for k := range secretData {
+			if _, exists := awsSecretData[k]; !exists {
+				needsAwsUpdate = true
+				break
+			}
+		}
+
+		// Check for keys that exist in AWS but not in secretData
+		if !needsAwsUpdate {
+			for k := range awsSecretData {
+				if _, exists := secretData[k]; !exists {
+					needsAwsUpdate = true
+					break
+				}
+			}
+		}
+
+		if needsAwsUpdate {
+			if err := r.createOrUpdateAwsSecret(ctx, smClient, aSecret.Spec.AwsSecretPath, secretData, log); err != nil {
+				log.Error(err, "Failed to create AWS Secret")
+				return ctrl.Result{}, err
+			}
+			log.Info("Updated AWS Secret", "name", existingSecret.Name)
 		}
 	}
 
@@ -184,7 +206,7 @@ func (r *ASecretReconciler) getAwsSecret(ctx context.Context, smClient *secretsm
 		SecretId: aws.String(secretID),
 	}
 
-	log.Info("Getting AWS secret", "path", secretID)
+	log.V(1).Info("Getting AWS secret", "path", secretID)
 	result, err := smClient.GetSecretValue(ctx, input)
 	if err != nil {
 		// Check if it's a resource not found error
@@ -262,22 +284,22 @@ func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClien
 			return err
 		}
 		return err
-	}
-
-	// Update existing secret
-	_, err = smClient.PutSecretValue(ctx, &secretsmanager.PutSecretValueInput{
-		SecretId:     aws.String(secretPath),
-		SecretString: aws.String(string(secretString)),
-	})
-
-	// If no error during update, also updates tags
-	if err == nil && len(tags) > 0 {
-		_, err := smClient.TagResource(ctx, &secretsmanager.TagResourceInput{
-			SecretId: aws.String(secretPath),
-			Tags:     tags,
+	} else {
+		// Update existing secret
+		_, err = smClient.PutSecretValue(ctx, &secretsmanager.PutSecretValueInput{
+			SecretId:     aws.String(secretPath),
+			SecretString: aws.String(string(secretString)),
 		})
 
-		return err
+		// If no error during update, also updates tags
+		if err == nil && len(tags) > 0 {
+			_, err := smClient.TagResource(ctx, &secretsmanager.TagResourceInput{
+				SecretId: aws.String(secretPath),
+				Tags:     tags,
+			})
+
+			return err
+		}
 	}
 	return err
 }
