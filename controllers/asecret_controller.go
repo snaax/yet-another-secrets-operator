@@ -178,13 +178,23 @@ func (r *ASecretReconciler) getAwsSecret(ctx context.Context, smClient *secretsm
 		SecretId: aws.String(secretPath),
 	}
 
+	log.Info("Getting AWS secret", "path", secretPath)
 	result, err := smClient.GetSecretValue(ctx, input)
 	if err != nil {
 		// Check if the error is because the secret doesn't exist
 		var resourceNotFound *smTypes.ResourceNotFoundException
 		if errors.As(err, &resourceNotFound) {
+			log.Info("AWS secret not found", "path", secretPath)
 			return nil, false, nil
 		}
+
+		// If it's an endpoint resolution error, log more details
+		if err.Error() == "not found, ResolveEndpointV2" {
+			log.Error(err, "Failed to resolve AWS endpoint - check AWS region configuration")
+			return nil, false, err
+		}
+
+		log.Error(err, "Failed to get AWS secret")
 		return nil, false, err
 	}
 
@@ -194,6 +204,7 @@ func (r *ASecretReconciler) getAwsSecret(ctx context.Context, smClient *secretsm
 		return nil, true, err
 	}
 
+	log.Info("Successfully retrieved AWS secret", "path", secretPath)
 	return secretData, true, nil
 }
 
