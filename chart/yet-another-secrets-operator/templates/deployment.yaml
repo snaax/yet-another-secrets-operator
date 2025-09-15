@@ -44,6 +44,12 @@ spec:
             - name: AWS_REGION
               value: {{ .Values.aws.region }}
             {{- end }}
+            {{- if .Values.aws.tags }}
+            {{- range $key, $value := .Values.aws.tags }}
+            - name: AWS_TAG_{{ $key | upper }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
             {{- if .Values.extraEnv }}
             {{- toYaml .Values.extraEnv | nindent 12 }}
             {{- end }}
