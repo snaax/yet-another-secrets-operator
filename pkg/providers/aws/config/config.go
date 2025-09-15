@@ -22,7 +22,7 @@ type AWSConfig struct {
 	Tags        map[string]string
 }
 
-// HealthConfig holds health and metrics server configuration
+// HealthConfig holds health server configuration
 type HealthConfig struct {
 	ProbeBindAddress string
 }
