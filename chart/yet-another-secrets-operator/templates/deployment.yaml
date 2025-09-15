@@ -32,6 +32,7 @@ spec:
             - /manager
           args:
             - --health-probe-bind-address=:{{ .Values.ports.healthProbe }}
+            - --metrics-bind-address=:{{ .Values.ports.metrics }}
             {{- if .Values.aws.region }}
             - --aws-region={{ .Values.aws.region }}
             {{- end }}

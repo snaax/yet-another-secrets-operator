@@ -50,6 +50,7 @@ probe:
 # Ports configuration
 ports:
   healthProbe: 8081
+  metrics: 8080
 
 # Create CRDs as part of the release
 installCRDs: true

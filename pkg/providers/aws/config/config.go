@@ -24,7 +24,8 @@ type AWSConfig struct {
 
 // HealthConfig holds health server configuration
 type HealthConfig struct {
-	ProbeBindAddress string
+	ProbeBindAddress   string
+	MetricsBindAddress string
 }
 
 // LeaderElectionConfig holds leader election configuration
@@ -47,7 +48,8 @@ func NewDefaultConfig() *OperatorConfig {
 			Tags:        defaultTags,
 		},
 		Health: HealthConfig{
-			ProbeBindAddress: ":8081",
+			ProbeBindAddress:   ":8081",
+			MetricsBindAddress: ":8080",
 		},
 		Leader: LeaderElectionConfig{
 			Enabled: false,
@@ -63,8 +65,9 @@ func (c *OperatorConfig) AddFlags(flags *pflag.FlagSet) {
 	flags.StringVar(&c.AWS.EndpointURL, "aws-endpoint", c.AWS.EndpointURL, "Custom AWS endpoint URL")
 	flags.IntVar(&c.AWS.MaxRetries, "aws-max-retries", c.AWS.MaxRetries, "Maximum number of AWS API retries")
 
-	// Health flags
+	// Health and metrics flags
 	flags.StringVar(&c.Health.ProbeBindAddress, "health-probe-bind-address", c.Health.ProbeBindAddress, "The address the probe endpoint binds to.")
+	flags.StringVar(&c.Health.MetricsBindAddress, "metrics-bind-address", c.Health.MetricsBindAddress, "The address the metrics endpoint binds to.")
 
 	// Leader election flags
 	flags.BoolVar(&c.Leader.Enabled, "leader-elect", c.Leader.Enabled, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
