@@ -1,6 +1,6 @@
-# Another Secrets Operator - Helm Chart
+# Yet Another Secrets Operator - Helm Chart
 
-This document explains how to deploy Another Secrets Operator using the Helm chart.
+This document explains how to deploy Yet Another Secrets Operator using the Helm chart.
 
 ## Prerequisites
 
@@ -11,29 +11,40 @@ This document explains how to deploy Another Secrets Operator using the Helm cha
 
 ## Installation
 
-### Add the Repository (Optional)
-
-If you are hosting the chart in a repository:
+### Add the Repository
 
 ```bash
-helm repo add another-secrets-operator https://your-repo-url.com
+helm repo add yet-another-secrets-operator https://snaax.github.io/yet-another-secrets-operator/charts
 helm repo update
 ```
 
 ### Install the Chart
 
-From the local chart directory:
+From the repository:
+
+```bash
+# Install with default settings
+helm install yaso yet-another-secrets-operator/yet-another-secrets-operator
+
+# Install with custom values
+helm install yaso yet-another-secrets-operator/yet-another-secrets-operator \
+  --set image.repository=your-registry/yet-another-secrets-operator \
+  --set image.tag=v0.1.0 \
+  --set aws.region=us-west-2
+```
+
+Or from the local chart directory:
 
 ```bash
 # Change to the chart directory
 cd chart/
 
 # Install with default settings
-helm install another-secrets-operator ./another-secrets-operator
+helm install yaso ./yet-another-secrets-operator
 
 # Install with custom values
-helm install another-secrets-operator ./another-secrets-operator \
-  --set image.repository=your-registry/another-secrets-operator \
+helm install yaso ./yet-another-secrets-operator \
+  --set image.repository=your-registry/yet-another-secrets-operator \
   --set image.tag=v0.1.0 \
   --set aws.region=us-west-2
 ```
@@ -41,122 +52,124 @@ helm install another-secrets-operator ./another-secrets-operator \
 Or using a values file:
 
 ```bash
-helm install another-secrets-operator ./another-secrets-operator -f values.yaml
+helm install yaso ./yet-another-secrets-operator -f values.yaml
+```
+
+## Using as a Dependency in Your Chart
+
+To include Yet Another Secrets Operator as a dependency in your Helm chart:
+
+```yaml
+apiVersion: v2
+name: your-application
+description: Your application description
+type: application
+version: 0.1.0
+dependencies:
+- name: yet-another-secrets-operator
+  version: "0.1.0"
+  repository: "https://snaax.github.io/yet-another-secrets-operator/charts"
+```
+
+Then, update your dependencies:
+
+```bash
+helm dependency update
 ```
 
 ## Configuration Options
 
-The following table lists the configurable parameters of the Another Secrets Operator chart:
+The following table lists the configurable parameters of the Yet Another Secrets Operator chart:
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `image.repository` | Image repository | `example/another-secrets-operator` |
-| `image.tag` | Image tag | `latest` |
+| `image.repository` | Image repository | `ghcr.io/snaax/yet-another-secrets-operator` |
+| `image.tag` | Image tag | `0.1.0` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `image.pullSecrets` | List of image pull secrets | `[]` |
 | `replicaCount` | Number of operator replicas | `1` |
-| `namespace` | Namespace to install the operator | `yaso` |
-| `serviceAccount.name` | Name of the service account | `another-secrets-operator` |
+| `namespace` | Namespace to install the operator in | `yaso` |
+```
 
-| `aws.region` | AWS region to use | `""` (uses Pod's environment) |
+### 2. Update chart/yet-another-secrets-operator/templates/NOTES.txt
 
-| `resources` | CPU/Memory resource requests/limits | Requests: 100m CPU, 64Mi Memory; Limits: 500m CPU, 128Mi Memory |
-| `probe.liveness.initialDelaySeconds` | Initial delay for liveness probe | `15` |
-| `probe.liveness.periodSeconds` | Period for liveness probe | `20` |
-| `probe.readiness.initialDelaySeconds` | Initial delay for readiness probe | `5` |
-| `probe.readiness.periodSeconds` | Period for readiness probe | `10` |
-| `ports.healthProbe` | Health probe port | `8081` |
-| `ports.metrics` | Metrics port | `8080` |
-| `installCRDs` | Whether to install CRDs as part of the release | `true` |
-| `nodeSelector` | Node selectors for scheduling | `{}` |
-| `tolerations` | Tolerations for scheduling | `[]` |
-| `affinity` | Affinity rules for scheduling | `{}` |
-| `leaderElection.enabled` | Enable leader election for controller manager | `true` |
-| `leaderElection.id` | Leader election ID | `"aso.yet-another-secrets.io"` |
-| `extraEnv` | Extra environment variables | `[]` |
-| `podSecurityContext` | Pod security context | `runAsNonRoot: true` |
-| `containerSecurityContext` | Container security context | `allowPrivilegeEscalation: false, capabilities.drop: [ALL]` |
+```
+Thank you for installing {{ .Chart.Name }} version {{ .Chart.Version }}.
 
-## AWS Authentication
+The Yet Another Secrets Operator has been deployed to your cluster in the {{ include "yet-another-secrets-operator.namespace" . }} namespace.
 
-### Using Pod Identity (EKS)
+## Next Steps
 
-Before installing the chart, set up EKS Pod Identity using the AWS CLI:
+1. Create an AGenerator for password generation:
+
+   ```yaml
+   apiVersion: yet-another-secrets.io/v1alpha1
+   kind: AGenerator
+   metadata:
+     name: password-generator
+   spec:
+     length: 16
+     includeUppercase: true
+     includeLowercase: true
+     includeNumbers: true
+     includeSpecialChars: true
+   ```
+
+2. Create an ASecret that references your generator:
+
+   ```yaml
+   apiVersion: yet-another-secrets.io/v1alpha1
+   kind: ASecret
+   metadata:
+     name: example-secret
+     namespace: {{ include "yet-another-secrets-operator.namespace" . }}
+   spec:
+     targetSecretName: my-app-secret
+     awsSecretPath: /path/to/aws/secret
+     data:
+       username:
+         value: admin
+       password:
+         generatorRef:
+           name: password-generator
+   ```
+
+3. Verify the operator created your secret:
+
+   ```bash
+   kubectl get secret my-app-secret -n {{ include "yet-another-secrets-operator.namespace" . }}
+   ```
+
+NOTE: Before using the operator, make sure Pod Identity is configured for your EKS cluster:
 
 ```bash
 aws eks create-pod-identity-association \
-    --cluster-name your-eks-cluster \
-    --namespace yaso \
-    --service-account another-secrets-operator \
-    --role-arn arn:aws:iam::123456789012:role/another-secrets-operator-role
+    --cluster-name <your-cluster-name> \
+    --namespace {{ include "yet-another-secrets-operator.namespace" . }} \
+    --role-arn <your-role-arn> \
+    --service-account {{ include "yet-another-secrets-operator.serviceAccountName" . }}
+```
 ```
 
-The chart is designed to work with Pod Identity without requiring any special configuration.
+### 3. Create an Example Dependency Chart (docs/examples/test-chart/Chart.yaml)
 
-### Using IRSA (older EKS method)
-
-Note: This chart has been simplified to focus on Pod Identity. If you need to use IRSA, you'll need to modify the chart to add annotation support.
-
-### Using Environment Variables
-
-To use environment variables (less secure, not recommended for production):
-
-```yaml
-aws:
-  region: "us-west-2"  # This sets AWS_REGION env var
+```yaml docs/examples/test-chart/Chart.yaml
+apiVersion: v2
+name: test-yaso
+description: YASO test
+type: application
+version: 0.0.1
+dependencies:
+- name: yet-another-secrets-operator
+  version: "0.1.0"
+  repository: "https://snaax.github.io/yet-another-secrets-operator/charts"
 ```
 
-## Using the Operator
+### 4. Update CI/CD workflow file
 
-### Create AGenerator
+In your `.github/workflows/build-and-publish.yaml` file, ensure consistency in references:
 
-Create a generator for password generation:
-
-```yaml
-apiVersion: yet-another-secrets.io/v1alpha1
-kind: AGenerator
-metadata:
-  name: password-generator
-spec:
-  length: 16
-  includeUppercase: true
-  includeLowercase: true
-  includeNumbers: true
-  includeSpecialChars: true
-```
-
-### Create ASecret
-
-Create a secret with reference to the generator:
-
-```yaml
-apiVersion: yet-another-secrets.io/v1alpha1
-kind: ASecret
-metadata:
-  name: my-app-secret
-  namespace: yaso
-spec:
-  targetSecretName: app-credentials
-  awsSecretPath: /my-app/secrets
-  data:
-    username:
-      value: admin
-    password:
-      generatorRef:
-        name: password-generator
-```
-
-## Uninstalling the Chart
-
-To uninstall/delete the operator deployment:
-
-```bash
-helm delete another-secrets-operator
-```
-
-Note: This will not delete the CRDs by default. To delete them manually:
-
-```bash
-kubectl delete crd asecrets.yet-another-secrets.io
-kubectl delete crd agenerators.yet-another-secrets.io
-```
+```yaml .github/workflows/build-and-publish.yaml
+# Update values.yaml with the correct image reference
+sed -i "s|repository: example/yet-another-secrets-operator|repository: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}|g" chart/yet-another-secrets-operator/values.yaml
+sed -i "s|tag: latest|tag: ${{ steps.chart_version.outputs.app_version }}|g" chart/yet-another-secrets-operator/values.yaml

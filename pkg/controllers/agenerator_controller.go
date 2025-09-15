@@ -9,7 +9,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	secretsv1alpha1 "github.com/example/another-secrets-operator/api/v1alpha1"
+	secretsv1alpha1 "github.com/yaso/yet-another-secrets-operator/api/v1alpha1"
+	"github.com/yaso/yet-another-secrets-operator/pkg/utils"
 )
 
 // AGeneratorReconciler reconciles a AGenerator object
@@ -43,7 +44,7 @@ func (r *AGeneratorReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// No active reconciliation is needed besides validation
 
 	// Validate the generator specification
-	if err := validateGeneratorSpec(aGenerator.Spec); err != nil {
+	if err := utils.ValidateGeneratorSpec(aGenerator.Spec); err != nil {
 		log.Error(err, "Invalid generator specification")
 		return ctrl.Result{}, err
 	}

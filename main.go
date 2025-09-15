@@ -1,7 +1,7 @@
 package main
 
 import (
-	"flag"
+	"context"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -13,11 +13,15 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	secretsv1alpha1 "github.com/example/another-secrets-operator/api/v1alpha1"
-	"github.com/example/another-secrets-operator/controllers"
+	"github.com/spf13/pflag"
+	secretsv1alpha1 "github.com/yaso/yet-another-secrets-operator/api/v1alpha1"
+	"github.com/yaso/yet-another-secrets-operator/pkg/controllers"
+
 	//+kubebuilder:scaffold:imports
+	awsclient "github.com/yaso/yet-another-secrets-operator/pkg/providers/aws/client"
+	awsconfig "github.com/yaso/yet-another-secrets-operator/pkg/providers/aws/config"
 )
 
 var (
@@ -33,51 +37,56 @@ func init() {
 }
 
 func main() {
-	var metricsAddr string
-	var enableLeaderElection bool
-	var probeAddr string
-	var awsRegion string
-	var awsEndpoint string
+	// Create default config
+	operatorConfig := awsconfig.NewDefaultConfig()
 
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&awsRegion, "aws-region", "", "AWS Region to use. If not specified, uses environment variable AWS_REGION or instance metadata.")
-	flag.StringVar(&awsEndpoint, "aws-endpoint", "", "Custom AWS endpoint URL (optional, for testing)")
+	// Add flags to pflag
+	operatorConfig.AddFlags(pflag.CommandLine)
 
-	opts := zap.Options{
-		Development: true,
+	// Parse flags
+	pflag.Parse()
+
+	// Load environment variables
+	operatorConfig.LoadFromEnv()
+
+	// Create AWS config for controllers
+	awsControllerConfig := operatorConfig.ToAWSControllerConfig()
+
+	// Force AWS client for now
+	awsClient := awsclient.NewClient(awsControllerConfig)
+
+	// Test AWS connectivity at startup
+	if !operatorConfig.AWS.SkipConnTest {
+		ctx := context.Background()
+
+		setupLog.Info("Testing AWS connectivity...")
+		if err := awsClient.TestConnection(ctx, setupLog); err != nil {
+			setupLog.Error(err, "Failed to connect to AWS Secrets Manager")
+			os.Exit(1)
+		} else {
+			setupLog.Info("Successfully connected to AWS Secrets Manager")
+		}
+	} else {
+		setupLog.Info("Skipping AWS connectivity test")
 	}
-	opts.BindFlags(flag.CommandLine)
-	flag.Parse()
-
-	// Configure AWS environment variables if provided via flags
-	if awsRegion != "" {
-		os.Setenv("AWS_REGION", awsRegion)
-	}
-	if awsEndpoint != "" {
-		os.Setenv("AWS_ENDPOINT_URL", awsEndpoint)
-	}
-
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
-		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "aso.yaso.io",
+		HealthProbeBindAddress: operatorConfig.Health.ProbeBindAddress,
+		LeaderElection:         operatorConfig.Leader.Enabled,
+		LeaderElectionID:       operatorConfig.Leader.ID,
 	})
+
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
 	if err = (&controllers.ASecretReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Log:    ctrl.Log.WithName("controllers").WithName("ASecret"),
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		Log:       log.Log.WithName("controllers").WithName("ASecret"),
+		AwsClient: awsClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ASecret")
 		os.Exit(1)
@@ -86,7 +95,7 @@ func main() {
 	if err = (&controllers.AGeneratorReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Log:    ctrl.Log.WithName("controllers").WithName("AGenerator"),
+		Log:    log.Log.WithName("controllers").WithName("AGenerator"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AGenerator")
 		os.Exit(1)

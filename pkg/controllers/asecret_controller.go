@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"context"
+	"context" // Add standard errors package
 	"encoding/json"
-	"errors" // Add standard errors package
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -21,14 +21,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	secretsv1alpha1 "github.com/example/another-secrets-operator/api/v1alpha1"
+	secretsv1alpha1 "github.com/yaso/yet-another-secrets-operator/api/v1alpha1"
+
+	awsclient "github.com/yaso/yet-another-secrets-operator/pkg/providers/aws/client"
+	"github.com/yaso/yet-another-secrets-operator/pkg/utils"
 )
 
 // ASecretReconciler reconciles a ASecret object
 type ASecretReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Log    logr.Logger
+	Scheme         *runtime.Scheme
+	Log            logr.Logger
+	AwsClient      *awsclient.AwsClient
+	SecretsManager *secretsmanager.Client
 }
 
 //+kubebuilder:rbac:groups=yet-another-secrets.io,resources=asecrets,verbs=get;list;watch;create;update;patch;delete
@@ -40,7 +45,7 @@ type ASecretReconciler struct {
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("asecret", req.NamespacedName)
-	log.Info("Reconciling ASecret")
+	log.V(1).Info("Reconciling ASecret") // Changed to V(1).Info for less verbose logs
 
 	// Fetch the ASecret instance
 	var aSecret secretsv1alpha1.ASecret
@@ -53,24 +58,13 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	// Initialize AWS client using the AWS configuration
-	awsConfig := NewAWSConfig()
-
-	smClient, err := awsConfig.CreateSecretsManagerClient(ctx, log)
-	if err != nil {
-		log.Error(err, "Failed to create AWS SecretsManager client")
-		return ctrl.Result{}, err
-	}
+	// Use the injected AWS  and client instead of creating a new one
+	awsClient := r.AwsClient
+	smClient := r.SecretsManager
 
 	// Log which credential provider is being used (useful for debugging)
-	if providerName, err := awsConfig.GetCredentialProviderInfo(ctx, log); err == nil {
+	if providerName, err := awsClient.GetCredentialProviderInfo(ctx, log); err == nil {
 		log.Info("AWS credential provider", "provider", providerName)
-	}
-
-	// Test AWS connectivity before proceeding
-	if err := awsConfig.TestConnection(ctx, log); err != nil {
-		log.Error(err, "AWS connectivity test failed - check AWS credentials and region configuration")
-		return ctrl.Result{RequeueAfter: time.Minute}, err
 	}
 
 	// Check if the secret exists in AWS SecretsManager
@@ -305,7 +299,7 @@ func (r *ASecretReconciler) generateValue(ctx context.Context, generatorName str
 	}
 
 	// Generate value based on generator spec
-	value, err := generateRandomString(generator.Spec)
+	value, err := utils.GenerateRandomString(generator.Spec)
 	if err != nil {
 		return "", err
 	}
@@ -315,6 +309,14 @@ func (r *ASecretReconciler) generateValue(ctx context.Context, generatorName str
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ASecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// Create the SecretsManager client during setup
+	var err error
+	ctx := context.Background()
+	r.SecretsManager, err = r.AwsClient.CreateSecretsManagerClient(ctx, r.Log)
+	if err != nil {
+		return fmt.Errorf("failed to create AWS SecretsManager client: %w", err)
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&secretsv1alpha1.ASecret{}).
 		Owns(&corev1.Secret{}).

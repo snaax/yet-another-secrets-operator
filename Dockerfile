@@ -17,10 +17,8 @@ RUN go mod download
 # Copy the source code
 COPY main.go main.go
 COPY api/ api/
-COPY controllers/ controllers/
-
-# Create boilerplate header
-RUN mkdir -p hack && echo '/*\nCopyright 2023.\n\nLicensed under the MIT License.\n*/' > hack/boilerplate.go.txt
+COPY hack/ hack/
+COPY pkg/ pkg/
 
 # Generate DeepCopy code
 RUN controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./..."

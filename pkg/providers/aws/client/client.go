@@ -1,4 +1,4 @@
-package controllers
+package client
 
 import (
 	"context"
@@ -9,41 +9,38 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/go-logr/logr"
+
+	awsconfig "github.com/yaso/yet-another-secrets-operator/pkg/providers/aws/config"
 )
 
-// AWSConfig holds AWS configuration for the operator
-type AWSConfig struct {
-	Region      string
-	EndpointURL string
-	MaxRetries  int
+// Client provides AWS operations
+type AwsClient struct {
+	Config awsconfig.AWSControllerConfig
 }
 
-// NewAWSConfig creates a new AWS configuration with default values
-func NewAWSConfig() *AWSConfig {
-	return &AWSConfig{
-		Region:     "", // Empty means use the default from environment or instance metadata
-		MaxRetries: 5,
+// NewClient creates a new AWS client
+func NewClient(config awsconfig.AWSControllerConfig) *AwsClient {
+	return &AwsClient{
+		Config: config,
 	}
 }
 
 // CreateSecretsManagerClient creates a new AWS SecretsManager client
-func (c *AWSConfig) CreateSecretsManagerClient(ctx context.Context, log logr.Logger) (*secretsmanager.Client, error) {
-	// Determine the region to use
-	region := c.Region
-	if region == "" {
-		region = getDefaultRegion()
-	}
+func (c *AwsClient) CreateSecretsManagerClient(ctx context.Context, log logr.Logger) (*secretsmanager.Client, error) {
+	// Precedence: 1. Explicit config  2. Environment variables  3. Instance metadata
+	region := c.determineRegion()
+	endpoint := c.determineEndpoint()
 
-	log.Info("Using AWS region", "region", region)
+	log.Info("Using AWS configuration", "region", region, "customEndpoint", endpoint != "")
 
 	// Create basic config options
 	opts := []func(*config.LoadOptions) error{
 		config.WithRegion(region),
-		config.WithRetryMaxAttempts(c.MaxRetries),
+		config.WithRetryMaxAttempts(c.Config.MaxRetries),
 	}
 
 	// Load configuration with explicit region
-	log.Info("Loading AWS configuration")
+	log.V(1).Info("Loading AWS configuration")
 	cfg, err := config.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
 		log.Error(err, "Failed to load AWS config")
@@ -54,10 +51,10 @@ func (c *AWSConfig) CreateSecretsManagerClient(ctx context.Context, log logr.Log
 	var clientOpts []func(*secretsmanager.Options)
 
 	// Set custom endpoint if specified
-	if c.EndpointURL != "" {
-		log.Info("Using custom endpoint URL", "endpoint", c.EndpointURL)
+	if endpoint != "" {
+		log.Info("Using custom endpoint URL", "endpoint", endpoint)
 		clientOpts = append(clientOpts, func(o *secretsmanager.Options) {
-			o.BaseEndpoint = aws.String(c.EndpointURL)
+			o.BaseEndpoint = aws.String(endpoint)
 		})
 	}
 
@@ -65,18 +62,15 @@ func (c *AWSConfig) CreateSecretsManagerClient(ctx context.Context, log logr.Log
 	smClient := secretsmanager.NewFromConfig(cfg, clientOpts...)
 
 	// Log the configured region
-	log.Info("AWS SecretsManager client created", "region", cfg.Region)
+	log.V(1).Info("AWS SecretsManager client created", "region", cfg.Region)
 
 	return smClient, nil
 }
 
 // GetCredentialProviderInfo returns information about which credential provider was used
-func (c *AWSConfig) GetCredentialProviderInfo(ctx context.Context, log logr.Logger) (string, error) {
+func (c *AwsClient) GetCredentialProviderInfo(ctx context.Context, log logr.Logger) (string, error) {
 	// Determine the region to use
-	region := c.Region
-	if region == "" {
-		region = getDefaultRegion()
-	}
+	region := c.determineRegion()
 
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
@@ -94,24 +88,31 @@ func (c *AWSConfig) GetCredentialProviderInfo(ctx context.Context, log logr.Logg
 	return creds.Source, nil
 }
 
-// getDefaultRegion tries to get an AWS region from environment variables
-func getDefaultRegion() string {
-	possibleEnvVars := []string{"AWS_REGION", "AWS_DEFAULT_REGION"}
-	for _, envVar := range possibleEnvVars {
-		if region := os.Getenv(envVar); region != "" {
-			return region
-		}
+// Add helper methods for determining configuration
+func (c *AwsClient) determineRegion() string {
+	// Explicit config has highest priority
+	if c.Config.Region != "" {
+		return c.Config.Region
 	}
-	return ""
+
+	// Environment variables next
+	return awsconfig.GetDefaultRegion()
+}
+
+func (c *AwsClient) determineEndpoint() string {
+	// Explicit config has highest priority
+	if c.Config.EndpointURL != "" {
+		return c.Config.EndpointURL
+	}
+
+	// Environment variable next
+	return os.Getenv("AWS_ENDPOINT_URL")
 }
 
 // TestConnection attempts to list secrets to verify connectivity
-func (c *AWSConfig) TestConnection(ctx context.Context, log logr.Logger) error {
+func (c *AwsClient) TestConnection(ctx context.Context, log logr.Logger) error {
 	// Determine the region to use
-	region := c.Region
-	if region == "" {
-		region = getDefaultRegion()
-	}
+	region := c.determineRegion()
 
 	// Create basic config
 	opts := []func(*config.LoadOptions) error{

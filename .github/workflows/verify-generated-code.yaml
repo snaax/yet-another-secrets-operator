@@ -1,0 +1,33 @@
+name: Verify Generated Code
+
+on:
+  pull_request:
+    paths:
+      - 'api/**/*.go'
+      - 'hack/boilerplate.go.txt'
+      
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+          
+      - name: Install controller-gen
+        run: go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.19.0
+          
+      - name: Regenerate code
+        run: controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./..."
+        
+      - name: Verify no changes
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "ERROR: Generated code is out of date. Please run 'controller-gen object:headerFile=\"hack/boilerplate.go.txt\" paths=\"./...\"' and commit the changes."
+            git status
+            git diff
+            exit 1
+          fi
