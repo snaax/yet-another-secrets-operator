@@ -1,9 +1,11 @@
 package controllers
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/go-logr/logr"
 )
 
@@ -23,59 +25,52 @@ func NewAWSConfig() *AWSConfig {
 }
 
 // CreateSecretsManagerClient creates a new AWS SecretsManager client
-func (c *AWSConfig) CreateSecretsManagerClient(log logr.Logger) (*secretsmanager.SecretsManager, error) {
-	// Create AWS config with optional settings
-	awsConfig := aws.NewConfig()
+func (c *AWSConfig) CreateSecretsManagerClient(ctx context.Context, log logr.Logger) (*secretsmanager.Client, error) {
+	// Create AWS SDK v2 config options
+	opts := []func(*config.LoadOptions) error{
+		config.WithRetryMaxAttempts(c.MaxRetries),
+	}
 
 	// Set region if specified
 	if c.Region != "" {
-		awsConfig.WithRegion(c.Region)
+		opts = append(opts, config.WithRegion(c.Region))
 	}
 
-	// Set custom endpoint if specified (useful for testing or non-standard endpoints)
-	if c.EndpointURL != "" {
-		awsConfig.WithEndpoint(c.EndpointURL)
-	}
-
-	// Set max retries
-	awsConfig.WithMaxRetries(c.MaxRetries)
-
-	// Enable EC2 metadata service by setting EC2MetadataDisableTimeoutOverride to true
-	// This allows the SDK to connect to the EC2 metadata service
-	awsConfig.WithEC2MetadataDisableTimeoutOverride(true)
-
-	// Create session using the default credential provider chain
+	// Load configuration with all credential providers in the chain
 	// This will automatically use:
 	// 1. Environment variables
 	// 2. Shared credentials file
 	// 3. EKS Pod Identity or IAM Roles for Service Accounts
 	// 4. EC2 Instance Profile
-	sess, err := session.NewSession(awsConfig)
+	cfg, err := config.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
-		log.Error(err, "Failed to create AWS session")
+		log.Error(err, "Failed to load AWS config")
 		return nil, err
 	}
 
+	// Set custom endpoint if specified (useful for testing or non-standard endpoints)
+	if c.EndpointURL != "" {
+		cfg.BaseEndpoint = aws.String(c.EndpointURL)
+	}
+
 	// Create and return the SecretsManager client
-	return secretsmanager.New(sess), nil
+	return secretsmanager.NewFromConfig(cfg), nil
 }
 
 // GetCredentialProviderInfo returns information about which credential provider was used
-func (c *AWSConfig) GetCredentialProviderInfo(log logr.Logger) (string, error) {
-	// Create AWS config with the EC2 metadata timeout override disabled
-	awsConfig := aws.NewConfig().WithEC2MetadataDisableTimeoutOverride(true)
-
-	sess, err := session.NewSession(awsConfig)
+func (c *AWSConfig) GetCredentialProviderInfo(ctx context.Context, log logr.Logger) (string, error) {
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		log.Error(err, "Failed to create AWS session for credential check")
+		log.Error(err, "Failed to load AWS config for credential check")
 		return "", err
 	}
 
-	creds, err := sess.Config.Credentials.Get()
+	// Get credentials
+	creds, err := cfg.Credentials.Retrieve(ctx)
 	if err != nil {
 		log.Error(err, "Failed to get AWS credentials info")
 		return "", err
 	}
 
-	return creds.ProviderName, nil
+	return creds.Source, nil
 }

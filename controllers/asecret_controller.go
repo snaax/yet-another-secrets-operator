@@ -3,16 +3,18 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors" // Add standard errors package
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	smTypes "github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors" // Rename to avoid conflict
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
+	k8sTypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -41,7 +43,7 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// Fetch the ASecret instance
 	var aSecret secretsv1alpha1.ASecret
 	if err := r.Get(ctx, req.NamespacedName, &aSecret); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			// Object not found, return. Created objects are automatically garbage collected.
 			return ctrl.Result{}, nil
 		}
@@ -53,14 +55,14 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	awsConfig := NewAWSConfig()
 	// AWS region can be overridden with environment variable AWS_REGION
 
-	smClient, err := awsConfig.CreateSecretsManagerClient(log)
+	smClient, err := awsConfig.CreateSecretsManagerClient(ctx, log)
 	if err != nil {
 		log.Error(err, "Failed to create AWS SecretsManager client")
 		return ctrl.Result{}, err
 	}
 
 	// Log which credential provider is being used (useful for debugging)
-	if providerName, err := awsConfig.GetCredentialProviderInfo(log); err == nil {
+	if providerName, err := awsConfig.GetCredentialProviderInfo(ctx, log); err == nil {
 		log.Info("AWS credential provider", "provider", providerName)
 	}
 
@@ -73,13 +75,13 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Look for existing Kubernetes secret
 	existingSecret := &corev1.Secret{}
-	namespacedName := types.NamespacedName{
+	namespacedName := k8sTypes.NamespacedName{
 		Namespace: req.Namespace,
 		Name:      aSecret.Spec.TargetSecretName,
 	}
 	kubeSecretExists := true
 	if err := r.Get(ctx, namespacedName, existingSecret); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			kubeSecretExists = false
 			existingSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -171,15 +173,16 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 }
 
 // getAwsSecret gets a secret from AWS SecretsManager
-func (r *ASecretReconciler) getAwsSecret(ctx context.Context, smClient *secretsmanager.SecretsManager, secretPath string, log logr.Logger) (map[string]string, bool, error) {
+func (r *ASecretReconciler) getAwsSecret(ctx context.Context, smClient *secretsmanager.Client, secretPath string, log logr.Logger) (map[string]string, bool, error) {
 	input := &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretPath),
 	}
 
-	result, err := smClient.GetSecretValue(input)
+	result, err := smClient.GetSecretValue(ctx, input)
 	if err != nil {
 		// Check if the error is because the secret doesn't exist
-		if _, ok := err.(*secretsmanager.ResourceNotFoundException); ok {
+		var resourceNotFound *smTypes.ResourceNotFoundException
+		if errors.As(err, &resourceNotFound) {
 			return nil, false, nil
 		}
 		return nil, false, err
@@ -195,7 +198,7 @@ func (r *ASecretReconciler) getAwsSecret(ctx context.Context, smClient *secretsm
 }
 
 // createOrUpdateAwsSecret creates or updates a secret in AWS SecretsManager
-func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClient *secretsmanager.SecretsManager, secretPath string, data map[string][]byte, log logr.Logger) error {
+func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClient *secretsmanager.Client, secretPath string, data map[string][]byte, log logr.Logger) error {
 	// Convert binary data to string
 	stringData := make(map[string]string)
 	for k, v := range data {
@@ -208,14 +211,15 @@ func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClien
 	}
 
 	// Check if secret exists
-	_, err = smClient.DescribeSecret(&secretsmanager.DescribeSecretInput{
+	_, err = smClient.DescribeSecret(ctx, &secretsmanager.DescribeSecretInput{
 		SecretId: aws.String(secretPath),
 	})
 
 	if err != nil {
 		// Create new secret if it doesn't exist
-		if _, ok := err.(*secretsmanager.ResourceNotFoundException); ok {
-			_, err = smClient.CreateSecret(&secretsmanager.CreateSecretInput{
+		var resourceNotFound *smTypes.ResourceNotFoundException
+		if errors.As(err, &resourceNotFound) {
+			_, err = smClient.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
 				Name:         aws.String(secretPath),
 				SecretString: aws.String(string(secretString)),
 			})
@@ -225,7 +229,7 @@ func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClien
 	}
 
 	// Update existing secret
-	_, err = smClient.PutSecretValue(&secretsmanager.PutSecretValueInput{
+	_, err = smClient.PutSecretValue(ctx, &secretsmanager.PutSecretValueInput{
 		SecretId:     aws.String(secretPath),
 		SecretString: aws.String(string(secretString)),
 	})
@@ -263,7 +267,7 @@ func (r *ASecretReconciler) processASecretData(ctx context.Context, aSecret *sec
 func (r *ASecretReconciler) generateValue(ctx context.Context, generatorName string, log logr.Logger) (string, error) {
 	// Get the generator
 	var generator secretsv1alpha1.AGenerator
-	if err := r.Get(ctx, types.NamespacedName{Name: generatorName}, &generator); err != nil {
+	if err := r.Get(ctx, k8sTypes.NamespacedName{Name: generatorName}, &generator); err != nil {
 		log.Error(err, "Failed to get generator", "name", generatorName)
 		return "", err
 	}
