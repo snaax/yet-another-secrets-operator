@@ -33,7 +33,7 @@ spec:
           args:
             - --health-probe-bind-address=:{{ .Values.ports.healthProbe }}
             - --metrics-bind-address=:{{ .Values.ports.metrics }}
-            - --aws-endpoint={{ .Values.aws.endpoint }}
+            - --aws-endpoint={{ .Values.aws.endpointUrl }}
             {{- if .Values.aws.region }}
             - --aws-region={{ .Values.aws.region }}
             {{- end }}
@@ -41,8 +41,8 @@ spec:
             - --leader-elect=true
             {{- end }}
           env:
-            - name: AWS_ENDPOINT
-              value: {{ .Values.aws.endpoint }}
+            - name: AWS_ENDPOINT_URL
+              value: {{ .Values.aws.endpointUrl }}
             {{- if .Values.aws.region }}
             - name: AWS_REGION
               value: {{ .Values.aws.region }}
