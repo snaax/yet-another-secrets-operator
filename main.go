@@ -14,6 +14,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/spf13/pflag"
 	secretsv1alpha1 "github.com/yaso/yet-another-secrets-operator/api/v1alpha1"
@@ -37,6 +38,11 @@ func init() {
 }
 
 func main() {
+	// Initialize the logger
+	opts := zap.Options{
+		Development: true, // Set to true for development mode with more verbose logging
+	}
+
 	// Create default config
 	operatorConfig := awsconfig.NewDefaultConfig()
 
@@ -45,6 +51,13 @@ func main() {
 
 	// Parse flags
 	pflag.Parse()
+
+	// Set the global logger
+	logger := zap.New(zap.UseFlagOptions(&opts))
+	ctrl.SetLogger(logger)
+
+	// From this point, setupLog will work properly
+	setupLog.Info("Starting the operator")
 
 	// Load environment variables
 	operatorConfig.LoadFromEnv()
