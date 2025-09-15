@@ -1,10 +1,10 @@
 # Build the manager binary
-FROM golang:1.21 as builder
+FROM golang:1.24 as builder
 
 WORKDIR /workspace
 
 # Install controller-gen
-RUN go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.13.0
+RUN go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.19.0
 
 # Copy the Go Modules manifests
 COPY go.mod go.mod

@@ -34,13 +34,7 @@ func (c *AWSConfig) CreateSecretsManagerClient(ctx context.Context, log logr.Log
 		region = getDefaultRegion()
 	}
 
-	// If we still don't have a region, use a default one for fallback
-	if region == "" {
-		region = "us-east-1" // Use a default region as fallback
-		log.Info("No AWS region specified, using default fallback", "region", region)
-	} else {
-		log.Info("Using AWS region", "region", region)
-	}
+	log.Info("Using AWS region", "region", region)
 
 	// Create basic config options
 	opts := []func(*config.LoadOptions) error{
@@ -82,10 +76,6 @@ func (c *AWSConfig) GetCredentialProviderInfo(ctx context.Context, log logr.Logg
 	region := c.Region
 	if region == "" {
 		region = getDefaultRegion()
-	}
-
-	if region == "" {
-		region = "us-east-1" // Default fallback
 	}
 
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))

@@ -25,7 +25,6 @@ serviceAccount:
 
 # AWS configuration
 aws:
-  endpointUrl: ""
   region: ""
 
 # Pod resources
