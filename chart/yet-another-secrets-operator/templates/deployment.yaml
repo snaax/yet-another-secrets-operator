@@ -33,9 +33,9 @@ spec:
           args:
             - --health-probe-bind-address=:{{ .Values.ports.healthProbe }}
             - --metrics-bind-address=:{{ .Values.ports.metrics }}
-            - --aws-endpoint=:{{ .Values.aws.endpoint }}
+            - --aws-endpoint={{ .Values.aws.endpoint }}
             {{- if .Values.aws.region }}
-            - --aws-region=:{{ .Values.aws.region }}
+            - --aws-region={{ .Values.aws.region }}
             {{- end }}
             {{- if .Values.leaderElection.enabled }}
             - --leader-elect=true
