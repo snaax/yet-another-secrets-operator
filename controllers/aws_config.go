@@ -1,6 +1,9 @@
 package controllers
 
 import (
+	"net/http"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
@@ -24,28 +27,23 @@ func NewAWSConfig() *AWSConfig {
 
 // CreateSecretsManagerClient creates a new AWS SecretsManager client
 func (c *AWSConfig) CreateSecretsManagerClient(log logr.Logger) (*secretsmanager.SecretsManager, error) {
-	// Create AWS config with optional settings
-	awsConfig := aws.NewConfig()
+	// Create a custom HTTP client that allows non-localhost endpoints for EKS Pod Identity
+	httpClient := &http.Client{
+		Timeout: time.Second * 30,
+	}
+
+	// Create AWS config
+	awsConfig := &aws.Config{
+		HTTPClient: httpClient,
+		MaxRetries: aws.Int(c.MaxRetries),
+	}
 
 	// Set region if specified
 	if c.Region != "" {
-		awsConfig.WithRegion(c.Region)
+		awsConfig.Region = aws.String(c.Region)
 	}
 
-	// Set custom endpoint if specified (useful for testing or non-standard endpoints)
-	if c.EndpointURL != "" {
-		awsConfig.WithEndpoint(c.EndpointURL)
-	}
-
-	// Set max retries
-	awsConfig.WithMaxRetries(c.MaxRetries)
-
-	// Create session using the default credential provider chain
-	// This will automatically use:
-	// 1. Environment variables
-	// 2. Shared credentials file
-	// 3. EKS Pod Identity or IAM Roles for Service Accounts
-	// 4. EC2 Instance Profile
+	// Create session
 	sess, err := session.NewSession(awsConfig)
 	if err != nil {
 		log.Error(err, "Failed to create AWS session")
