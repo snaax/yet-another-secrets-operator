@@ -16,6 +16,10 @@ type ASecretSpec struct {
 	// Values can be hardcoded or generated using a generator reference
 	// +optional
 	Data map[string]DataSource `json:"data,omitempty"`
+
+	// Tags to apply to the AWS Secret (optional)
+	// +optional
+	Tags map[string]string `json:"tags,omitempty"`
 }
 
 // DataSource defines the source of the secret data

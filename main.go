@@ -49,25 +49,21 @@ func main() {
 	// Load environment variables
 	operatorConfig.LoadFromEnv()
 
-	// Create AWS config for controllers
-	awsControllerConfig := operatorConfig.ToAWSControllerConfig()
+	// Create AWS config
+	awsConfig := operatorConfig.ToAWSConfig()
 
 	// Force AWS client for now
-	awsClient := awsclient.NewClient(awsControllerConfig)
+	awsClient := awsclient.NewClient(awsConfig)
 
 	// Test AWS connectivity at startup
-	if !operatorConfig.AWS.SkipConnTest {
-		ctx := context.Background()
+	ctx := context.Background()
 
-		setupLog.Info("Testing AWS connectivity...")
-		if err := awsClient.TestConnection(ctx, setupLog); err != nil {
-			setupLog.Error(err, "Failed to connect to AWS Secrets Manager")
-			os.Exit(1)
-		} else {
-			setupLog.Info("Successfully connected to AWS Secrets Manager")
-		}
+	setupLog.Info("Testing AWS connectivity...")
+	if err := awsClient.TestConnection(ctx, setupLog); err != nil {
+		setupLog.Error(err, "Failed to connect to AWS Secrets Manager")
+		os.Exit(1)
 	} else {
-		setupLog.Info("Skipping AWS connectivity test")
+		setupLog.Info("Successfully connected to AWS Secrets Manager")
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{

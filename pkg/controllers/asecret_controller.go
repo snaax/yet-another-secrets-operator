@@ -241,6 +241,15 @@ func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClien
 		SecretId: aws.String(secretPath),
 	})
 
+	// Convert tags configuration to AWS Tags
+	var tags []smTypes.Tag
+	for k, v := range r.AwsClient.Config.Tags {
+		tags = append(tags, smTypes.Tag{
+			Key:   aws.String(k),
+			Value: aws.String(v),
+		})
+	}
+
 	if err != nil {
 		// Create new secret if it doesn't exist
 		var resourceNotFound *smTypes.ResourceNotFoundException
@@ -248,6 +257,7 @@ func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClien
 			_, err = smClient.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
 				Name:         aws.String(secretPath),
 				SecretString: aws.String(string(secretString)),
+				Tags:         tags,
 			})
 			return err
 		}
@@ -259,6 +269,16 @@ func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClien
 		SecretId:     aws.String(secretPath),
 		SecretString: aws.String(string(secretString)),
 	})
+
+	// If no error during update, also updates tags
+	if err == nil && len(tags) > 0 {
+		_, err := smClient.TagResource(ctx, &secretsmanager.TagResourceInput{
+			SecretId: aws.String(secretPath),
+			Tags:     tags,
+		})
+
+		return err
+	}
 	return err
 }
 

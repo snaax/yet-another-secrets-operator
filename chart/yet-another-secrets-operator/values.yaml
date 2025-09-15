@@ -26,6 +26,8 @@ serviceAccount:
 # AWS configuration
 aws:
   region: ""
+  # tags:
+  #   managed-by: yaso
 
 # Pod resources
 resources:

@@ -15,11 +15,11 @@ import (
 
 // Client provides AWS operations
 type AwsClient struct {
-	Config awsconfig.AWSControllerConfig
+	Config awsconfig.AWSConfig
 }
 
 // NewClient creates a new AWS client
-func NewClient(config awsconfig.AWSControllerConfig) *AwsClient {
+func NewClient(config awsconfig.AWSConfig) *AwsClient {
 	return &AwsClient{
 		Config: config,
 	}
