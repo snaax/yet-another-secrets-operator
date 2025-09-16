@@ -1,56 +1,47 @@
 Thank you for installing {{ .Chart.Name }} version {{ .Chart.Version }}.
 
-The Another Secrets Operator has been deployed to your cluster in the {{ include "yet-another-secrets-operator.namespace" . }} namespace.
+The Yet Another Secrets Operator has been deployed to your cluster in the {{ include "yet-another-secrets-operator.namespace" . }} namespace.
 
 ## Next Steps
 
 1. Create an AGenerator for password generation:
 
-   ```yaml
-   apiVersion: yet-another-secrets.io/v1alpha1
-   kind: AGenerator
-   metadata:
-     name: password-generator
-   spec:
-     length: 16
-     includeUppercase: true
-     includeLowercase: true
-     includeNumbers: true
-     includeSpecialChars: true
-   ```
+apiVersion: yet-another-secrets.io/v1alpha1
+kind: AGenerator
+metadata:
+  name: password-generator
+spec:
+  length: 16
+  includeUppercase: true
+  includeLowercase: true
+  includeNumbers: true
+  includeSpecialChars: true
 
 2. Create an ASecret that references your generator:
 
-   ```yaml
-   apiVersion: yet-another-secrets.io/v1alpha1
-   kind: ASecret
-   metadata:
-     name: example-secret
-     namespace: {{ include "yet-another-secrets-operator.namespace" . }}
-   spec:
-     targetSecretName: my-app-secret
-     awsSecretPath: /path/to/aws/secret
-     data:
-       username:
-         value: admin
-       password:
-         generatorRef:
-           name: password-generator
-   ```
+apiVersion: yet-another-secrets.io/v1alpha1
+kind: ASecret
+metadata:
+  name: example-secret
+  namespace: {{ include "yet-another-secrets-operator.namespace" . }}
+spec:
+  targetSecretName: my-app-secret
+  awsSecretPath: /path/to/aws/secret
+  data:
+    username:
+      value: admin
+    password:
+      generatorRef:
+        name: password-generator
 
 3. Verify the operator created your secret:
 
-   ```bash
-   kubectl get secret my-app-secret -n {{ include "yet-another-secrets-operator.namespace" . }}
-   ```
-
+kubectl get secret my-app-secret -n {{ include "yet-another-secrets-operator.namespace" . }}
 
 NOTE: Before using the operator, make sure Pod Identity is configured for your EKS cluster:
 
-```bash
 aws eks create-pod-identity-association \
     --cluster-name <your-cluster-name> \
     --namespace {{ include "yet-another-secrets-operator.namespace" . }} \
-    --service-account {{ include "yet-another-secrets-operator.serviceAccountName" . }} \
-    --role-arn <your-role-arn>
-```
+    --role-arn <your-role-arn> \
+    --service-account {{ include "yet-another-secrets-operator.serviceAccountName" . }}

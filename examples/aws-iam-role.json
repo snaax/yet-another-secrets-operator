@@ -1,26 +1,37 @@
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "secretsmanager:GetSecretValue",
-        "secretsmanager:DescribeSecret",
-        "secretsmanager:PutSecretValue",
-        "secretsmanager:CreateSecret",
-        "secretsmanager:UpdateSecret",
-        "secretsmanager:TagResource"
-      ],
-      "Resource": [
-        "arn:aws:secretsmanager:*:<ACCOUNT-ID>:secret:*"
-      ]
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "secretsmanager:ListSecrets"
-      ],
-      "Resource": "*"
-    }
-  ]
+    "Statement": [
+        {
+            "Action": [
+                "secretsmanager:GetResourcePolicy",
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret",
+                "secretsmanager:ListSecrets",
+                "secretsmanager:ListSecretVersionIds"
+            ],
+            "Effect": "Allow",
+            "Resource": "*"
+        },
+        {
+            "Action": [
+                "secretsmanager:CreateSecret",
+                "secretsmanager:PutSecretValue",
+                "secretsmanager:TagResource"
+            ],
+            "Effect": "Allow",
+            "Resource": [
+                "arn:aws:secretsmanager:*:<ACCOUNT-ID>:secret:*"
+            ]
+        },
+        {
+            "Action": "secretsmanager:DeleteSecret",
+            "Condition": {
+                "StringEquals": {
+                    "secretsmanager:ResourceTag/managed-by": "yaso"
+                }
+            },
+            "Effect": "Allow",
+            "Resource": "arn:aws:secretsmanager:*:<ACCOUNT-ID>:secret:*"
+        }
+    ],
+    "Version": "2012-10-17"
 }
