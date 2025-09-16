@@ -40,6 +40,9 @@ spec:
             {{- if .Values.leaderElection.enabled }}
             - --leader-elect=true
             {{- end }}
+            {{- if .Values.logger.debug }}
+            - --debug={{ .Values.logger.debug }}
+            {{- end }}
           env:
             {{- if .Values.aws.region }}
             - name: AWS_REGION

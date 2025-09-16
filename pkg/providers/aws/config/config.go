@@ -12,6 +12,7 @@ type OperatorConfig struct {
 	AWS    AWSConfig
 	Health HealthConfig
 	Leader LeaderElectionConfig
+	Debug  bool
 }
 
 // AWSConfig holds AWS-specific configuration
@@ -57,6 +58,7 @@ func NewDefaultConfig() *OperatorConfig {
 			Enabled: false,
 			ID:      "aso.yaso.io",
 		},
+		Debug: false,
 	}
 }
 
@@ -74,6 +76,9 @@ func (c *OperatorConfig) AddFlags(flags *pflag.FlagSet) {
 
 	// Leader election flags
 	flags.BoolVar(&c.Leader.Enabled, "leader-elect", c.Leader.Enabled, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+
+	// Debug
+	flags.BoolVar(&c.Debug, "debug", c.Debug, "Enable development mode of zap for logging extra informations.")
 }
 
 // LoadFromEnv loads config values from environment variables

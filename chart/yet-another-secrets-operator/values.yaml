@@ -30,6 +30,9 @@ aws:
   # tags:
   #   managed-by: yaso
 
+logger:
+  debug: false
+
 # Pod resources
 resources:
   limits:

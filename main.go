@@ -38,11 +38,6 @@ func init() {
 }
 
 func main() {
-	// Initialize the logger
-	opts := zap.Options{
-		Development: true, // Set to true for development mode with more verbose logging
-	}
-
 	// Create default config
 	operatorConfig := awsconfig.NewDefaultConfig()
 
@@ -53,6 +48,9 @@ func main() {
 	pflag.Parse()
 
 	// Set the global logger
+	opts := zap.Options{
+		Development: operatorConfig.Debug,
+	}
 	logger := zap.New(zap.UseFlagOptions(&opts))
 	ctrl.SetLogger(logger)
 
