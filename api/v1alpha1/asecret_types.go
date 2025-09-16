@@ -50,7 +50,7 @@ type ASecretStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:resource:path=asecrets,scope=Namespaced,shortNames=asec
+//+kubebuilder:resource:path=asecrets,scope=Namespaced
 
 // ASecret is the Schema for the asecrets API
 type ASecret struct {
