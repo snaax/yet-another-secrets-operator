@@ -169,6 +169,18 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if awsSecretExists {
 		needsAwsUpdate := false
 
+		// Prepare data for AWS update, excluding onlyImportRemote keys
+		awsUpdateData := make(map[string][]byte)
+		for k, v := range secretData {
+			// Check if this key has onlyImportRemote=true
+			if dataSource, exists := aSecret.Spec.Data[k]; exists &&
+				dataSource.OnlyImportRemote != nil && *dataSource.OnlyImportRemote {
+				// Skip onlyImportRemote keys - they shouldn't be written back to AWS
+				continue
+			}
+			awsUpdateData[k] = v
+		}
+
 		// Check for keys that exist in secretData but not in AWS
 		for k := range secretData {
 			if _, exists := awsSecretData[k]; !exists {
@@ -328,6 +340,14 @@ func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClien
 // processASecretData processes the data from the ASecret, generating values as needed
 func (r *ASecretReconciler) processASecretData(ctx context.Context, aSecret *secretsv1alpha1.ASecret, secretData map[string][]byte, log logr.Logger) error {
 	for key, dataSource := range aSecret.Spec.Data {
+		// Handle onlyImportRemote flag - only import existing values, don't create new ones
+		if dataSource.OnlyImportRemote != nil && *dataSource.OnlyImportRemote {
+			// Skip processing - the value should only come from remote (AWS)
+			// If it exists in secretData (from AWS), keep it; if not, don't create
+			log.V(1).Info("Skipping key with onlyImportRemote=true", "key", key)
+			continue
+		}
+
 		// Skip if value already exists in the secret data (don't override existing values)
 		if _, exists := secretData[key]; exists {
 			continue

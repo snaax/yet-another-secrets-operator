@@ -31,6 +31,10 @@ type DataSource struct {
 	// GeneratorRef refers to a AGenerator to generate values
 	// +optional
 	GeneratorRef *GeneratorReference `json:"generatorRef,omitempty"`
+
+	// OnlyImportRemote imports value from remote provider only, do not create if missing
+	// +optional
+	OnlyImportRemote *bool `json:"onlyImportRemote,omitempty"`
 }
 
 // GeneratorReference contains the reference to a generator
