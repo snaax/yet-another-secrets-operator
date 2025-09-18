@@ -30,6 +30,21 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 controller-gen: ## Download controller-gen locally if necessary.
 	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.19.0)
 
+.PHONY: update-helm-crds
+update-helm-crds: manifests ## Update Helm chart CRDs while preserving template conditions
+	@echo "Updating Helm chart CRDs..."
+	@# Create temporary file with the conditional wrapper
+	@echo "{{- if .Values.installCRDs }}" > chart/yet-another-secrets-operator/templates/crds.yaml.tmp
+	@echo "---" >> chart/yet-another-secrets-operator/templates/crds.yaml.tmp
+	@# Append the generated CRDs
+	@tail -n +2 config/crd/bases/yet-another-secrets.io_agenerators.yaml >> chart/yet-another-secrets-operator/templates/crds.yaml.tmp
+	@echo "---" >> chart/yet-another-secrets-operator/templates/crds.yaml.tmp
+	@tail -n +2 config/crd/bases/yet-another-secrets.io_asecrets.yaml >> chart/yet-another-secrets-operator/templates/crds.yaml.tmp
+	@echo "{{- end }}" >> chart/yet-another-secrets-operator/templates/crds.yaml.tmp
+	@# Replace the original file
+	@mv chart/yet-another-secrets-operator/templates/crds.yaml.tmp chart/yet-another-secrets-operator/templates/crds.yaml
+	@echo "Helm chart CRDs updated successfully"
+
 # go-get-tool will 'go install' any package with specified version
 define go-get-tool
 @[ -f $(1) ] || { \

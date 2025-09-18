@@ -107,4 +107,4 @@ After updating the API types, you'll need to regenerate the CRDs using controlle
 ```bash
 # Typically something like:
 make generate
-make manifests
+make update-helm-crds
