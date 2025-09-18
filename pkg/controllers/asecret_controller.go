@@ -74,6 +74,9 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{RequeueAfter: time.Second * 30}, err
 	}
 
+	// Check if we should only import remote data (ignore local spec completely)
+	onlyImportRemote := aSecret.Spec.OnlyImportRemote != nil && *aSecret.Spec.OnlyImportRemote
+
 	// Look for existing Kubernetes secret
 	existingSecret := &corev1.Secret{}
 	namespacedName := k8sTypes.NamespacedName{
@@ -97,47 +100,67 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// Prepare the secret data
-	secretData := make(map[string][]byte)
+	var secretData map[string][]byte
 
-	// If Kubernetes secret exists, start with its data
-	if kubeSecretExists && existingSecret.Data != nil {
-		for k, v := range existingSecret.Data {
-			secretData[k] = v
+	if onlyImportRemote {
+		// Only import from AWS, ignore all local specs and existing Kubernetes data
+		log.Info("OnlyImportRemote enabled - importing only from AWS")
+		secretData = make(map[string][]byte)
+
+		if awsSecretExists {
+			for k, v := range awsSecretData {
+				secretData[k] = []byte(v)
+			}
+			log.Info("Imported data from AWS", "keys", len(secretData))
+		} else {
+			log.Info("No AWS secret found and OnlyImportRemote is true - creating empty secret")
+			// Create empty secret data when AWS secret doesn't exist
+			secretData = make(map[string][]byte)
 		}
-	}
+	} else {
+		// Normal processing with merging logic
+		secretData = make(map[string][]byte)
 
-	// If AWS secret exists, merge its data (AWS is first source of truth)
-	if awsSecretExists {
-		for k, v := range awsSecretData {
-			secretData[k] = []byte(v)
-		}
-	}
-
-	if awsClient.Config.RemoveRemoteKeys {
-		// Track which keys are managed by this ASecret CR
-		managedKeys := make(map[string]bool)
-		for key := range aSecret.Spec.Data {
-			managedKeys[key] = true
-		}
-
-		// Remove keys that are no longer in the ASecret spec (pruning)
-		keysToDelete := []string{}
-		for k := range secretData {
-			if !managedKeys[k] {
-				keysToDelete = append(keysToDelete, k)
+		// If Kubernetes secret exists, start with its data
+		if kubeSecretExists && existingSecret.Data != nil {
+			for k, v := range existingSecret.Data {
+				secretData[k] = v
 			}
 		}
 
-		// Remove the keys marked for deletion
-		for _, k := range keysToDelete {
-			delete(secretData, k)
+		// If AWS secret exists, merge its data (AWS is first source of truth)
+		if awsSecretExists {
+			for k, v := range awsSecretData {
+				secretData[k] = []byte(v)
+			}
 		}
-	}
 
-	// Process ASecret data specifications (last source of truth)
-	if err := r.processASecretData(ctx, &aSecret, secretData, log); err != nil {
-		log.Error(err, "Failed to process ASecret data")
-		return ctrl.Result{}, err
+		if awsClient.Config.RemoveRemoteKeys {
+			// Track which keys are managed by this ASecret CR
+			managedKeys := make(map[string]bool)
+			for key := range aSecret.Spec.Data {
+				managedKeys[key] = true
+			}
+
+			// Remove keys that are no longer in the ASecret spec (pruning)
+			keysToDelete := []string{}
+			for k := range secretData {
+				if !managedKeys[k] {
+					keysToDelete = append(keysToDelete, k)
+				}
+			}
+
+			// Remove the keys marked for deletion
+			for _, k := range keysToDelete {
+				delete(secretData, k)
+			}
+		}
+
+		// Process ASecret data specifications (last source of truth)
+		if err := r.processASecretData(ctx, &aSecret, secretData, log); err != nil {
+			log.Error(err, "Failed to process ASecret data")
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Create or update the Kubernetes secret
@@ -166,7 +189,7 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		log.Info("Updated Kubernetes Secret", "name", existingSecret.Name)
 	}
 
-	if awsSecretExists {
+	if !onlyImportRemote && awsSecretExists {
 		needsAwsUpdate := false
 
 		// Prepare data for AWS update, excluding onlyImportRemote keys

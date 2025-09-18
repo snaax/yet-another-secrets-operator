@@ -64,7 +64,6 @@ Each key in the `data` field supports the following options:
 3. For keys with `onlyImportRemote: true`, only existing remote values are imported - no new values are created.
 4. If there are keys in the ASecret that aren't in the AWS Secret or Kubernetes Secret, they get added (either using the hardcoded value or by generating one).
    1. (optional) if you set removeRemoteKeys, then it'll also remove the remote keys that are not in the ASecret
-```
 
 ```markdown README-helm.md
 apiVersion: yet-another-secrets.io/v1alpha1
@@ -85,6 +84,32 @@ spec:
       onlyImportRemote: true  # Only import from AWS, don't create if missing
 ```
 
+### Import-Only Mode
+
+You can configure the operator to only import existing secrets from AWS without creating new ones:
+
+#### Spec-Level Import-Only
+When `onlyImportRemote` is set to `true` at the spec level, the operator ignores all data specifications and only imports what exists in AWS:
+
+```yaml
+apiVersion: yet-another-secrets.io/v1alpha1
+kind: ASecret
+metadata:
+  name: aws-only-secrets
+  namespace: default
+spec:
+  targetSecretName: imported-secret
+  awsSecretPath: /existing/aws/secret
+  onlyImportRemote: true
+  data:
+    # This entire data section is ignored when onlyImportRemote=true at spec level
+    username:
+      value: admin
+    password:
+      generatorRef:
+        name: password-generator
+```
+
 ## Configuration Options
 
 The following table lists the configurable parameters of the Yet Another Secrets Operator chart:
@@ -98,9 +123,9 @@ The following table lists the configurable parameters of the Yet Another Secrets
 | `replicaCount` | Number of operator replicas | `1` |
 | `aws.region` | AWS Region | `` |
 | `aws.removeRemoteKeys` | Remove remote keys if not in ASecret | `true` |
-```
 
-## 5. Generate Updated CRDs
+
+## Generate Updated CRDs
 
 After updating the API types, you'll need to regenerate the CRDs using controller-gen or make commands:
 

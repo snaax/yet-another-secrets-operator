@@ -20,6 +20,10 @@ type ASecretSpec struct {
 	// Tags to apply to the AWS Secret (optional)
 	// +optional
 	Tags map[string]string `json:"tags,omitempty"`
+
+	// OnlyImportRemote imports all values from remote provider only, do not create if missing
+	// +optional
+	OnlyImportRemote *bool `json:"onlyImportRemote,omitempty"`
 }
 
 // DataSource defines the source of the secret data
