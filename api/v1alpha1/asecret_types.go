@@ -12,6 +12,11 @@ type ASecretSpec struct {
 	// AwsSecretPath is the path in AWS SecretsManager where the secret is stored
 	AwsSecretPath string `json:"awsSecretPath"`
 
+	// KmsKeyId is the AWS KMS key ID or ARN to use for encrypting the secret in AWS Secrets Manager
+	// If not specified, uses the default AWS managed key
+	// +optional
+	KmsKeyId string `json:"kmsKeyId,omitempty"`
+
 	// Data contains the secret data. Each key must be a valid DNS subdomain name.
 	// Values can be hardcoded or generated using a generator reference
 	// +optional

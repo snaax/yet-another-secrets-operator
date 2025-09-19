@@ -207,6 +207,11 @@ spec:
                   Data contains the secret data. Each key must be a valid DNS subdomain name.
                   Values can be hardcoded or generated using a generator reference
                 type: object
+              kmsKeyId:
+                description: |-
+                  KmsKeyId is the AWS KMS key ID or ARN to use for encrypting the secret in AWS Secrets Manager
+                  If not specified, uses the default AWS managed key
+                type: string
               onlyImportRemote:
                 description: OnlyImportRemote imports all values from remote provider
                   only, do not create if missing

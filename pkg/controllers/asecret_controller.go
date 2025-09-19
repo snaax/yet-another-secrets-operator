@@ -223,7 +223,7 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 
 		if needsAwsUpdate {
-			if err := r.createOrUpdateAwsSecret(ctx, smClient, aSecret.Spec.AwsSecretPath, secretData, log); err != nil {
+			if err := r.createOrUpdateAwsSecret(ctx, smClient, &aSecret, secretData, log); err != nil {
 				log.Error(err, "Failed to create AWS Secret")
 				return ctrl.Result{}, err
 			}
@@ -302,7 +302,7 @@ func (r *ASecretReconciler) getAwsSecret(ctx context.Context, smClient *secretsm
 }
 
 // createOrUpdateAwsSecret creates or updates a secret in AWS SecretsManager
-func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClient *secretsmanager.Client, secretPath string, data map[string][]byte, log logr.Logger) error {
+func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClient *secretsmanager.Client, aSecret *secretsv1alpha1.ASecret, data map[string][]byte, log logr.Logger) error {
 	// Convert binary data to string
 	stringData := make(map[string]string)
 	for k, v := range data {
@@ -313,6 +313,8 @@ func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClien
 	if err != nil {
 		return err
 	}
+
+	secretPath := aSecret.Spec.AwsSecretPath
 
 	// Check if secret exists
 	_, err = smClient.DescribeSecret(ctx, &secretsmanager.DescribeSecretInput{
@@ -328,15 +330,35 @@ func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClien
 		})
 	}
 
+	// Add ASecret spec tags if provided
+	if aSecret.Spec.Tags != nil {
+		for k, v := range aSecret.Spec.Tags {
+			tags = append(tags, smTypes.Tag{
+				Key:   aws.String(k),
+				Value: aws.String(v),
+			})
+		}
+	}
+
 	if err != nil {
 		// Create new secret if it doesn't exist
 		var resourceNotFound *smTypes.ResourceNotFoundException
 		if errors.As(err, &resourceNotFound) {
-			_, err = smClient.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
+			createInput := &secretsmanager.CreateSecretInput{
 				Name:         aws.String(secretPath),
 				SecretString: aws.String(string(secretString)),
 				Tags:         tags,
-			})
+			}
+
+			// Add KMS key if specified
+			if aSecret.Spec.KmsKeyId != "" {
+				createInput.KmsKeyId = aws.String(aSecret.Spec.KmsKeyId)
+				log.Info("Creating AWS secret with custom KMS key", "path", secretPath, "kmsKeyId", aSecret.Spec.KmsKeyId)
+			} else {
+				log.Info("Creating AWS secret with default encryption", "path", secretPath)
+			}
+
+			_, err = smClient.CreateSecret(ctx, createInput)
 			return err
 		}
 		return err
