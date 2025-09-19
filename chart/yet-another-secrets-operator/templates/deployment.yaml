@@ -48,6 +48,12 @@ spec:
             - name: AWS_REGION
               value: {{ .Values.aws.region }}
             {{- end }}
+            - name: DEBUG_KMS_NAME
+              value: {{ .Values.aws.kms.configMap.name | quote }}
+            - name: DEBUG_KMS_NAMESPACE
+              value: {{ .Values.aws.kms.configMap.namespace | quote }}
+            - name: DEBUG_KMS_KEY
+              value: {{ .Values.aws.kms.configMap.key | quote }}
             {{- if .Values.aws.kms }}
             - name: AWS_DEFAULT_KMS_KEY_ID
             {{- if .Values.aws.kms.keyId }}
