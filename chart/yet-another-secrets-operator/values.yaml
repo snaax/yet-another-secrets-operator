@@ -28,12 +28,7 @@ aws:
   region: ""
   removeRemoteKeys: true
   # Default KMS key ID for all secrets (can be overridden per ASecret)
-  kms:
-    keyId: ""
-    # Load kms keyId from configMap
-    configMap:
-      name: ""
-      key: ""
+  kmsKeyId:
   # tags:
   #   managed-by: yaso
 

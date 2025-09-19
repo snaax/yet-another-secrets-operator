@@ -37,6 +37,9 @@ spec:
             - --aws-region={{ .Values.aws.region }}
             {{- end }}
             - --remove-remote-keys={{ .Values.aws.removeRemoteKeys }}
+            {{- if .Values.aws.kmsKeyId }}
+            - --aws-default-kms-key-id={{ .Values.aws.kmsKeyId }}
+            {{- end }}
             {{- if .Values.leaderElection.enabled }}
             - --leader-elect=true
             {{- end }}
@@ -44,21 +47,6 @@ spec:
             - --debug={{ .Values.logger.debug }}
             {{- end }}
           env:
-            {{- if .Values.aws.region }}
-            - name: AWS_REGION
-              value: {{ .Values.aws.region }}
-            {{- end }}
-            {{- if .Values.aws.kms }}
-            - name: AWS_DEFAULT_KMS_KEY_ID
-            {{- if .Values.aws.kms.keyId }}
-              value: {{ .Values.aws.kms.keyId }}
-            {{- else if and .Values.aws.kms.configMap .Values.aws.kms.configMap.name .Values.aws.kms.configMap.key }}
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ .Values.aws.kms.configMap.name }}
-                  key: {{ .Values.aws.kms.configMap.key }}
-            {{- end }}
-            {{- end }}
             {{- if .Values.aws.tags }}
             {{- range $key, $value := .Values.aws.tags }}
             - name: AWS_TAG_{{ $key | upper }}

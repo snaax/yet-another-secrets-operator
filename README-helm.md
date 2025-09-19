@@ -94,5 +94,4 @@ The following table lists the configurable parameters of the Yet Another Secrets
 | `replicaCount` | Number of operator replicas | `1` |
 | `aws.region` | AWS Region | `` |
 | `aws.removeRemoteKeys` | Remove remote keys if not in ASecret | `false` |
-| `aws.kms.keyId` | Default operator kms key to use | `` |
-| `aws.kms.configMap` | Default operator kms key to use loaded from a configMap value | `` |
+| `aws.kmsKeyId` | Default kms key to use | `` |
