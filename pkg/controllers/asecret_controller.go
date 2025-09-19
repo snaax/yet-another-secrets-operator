@@ -189,35 +189,38 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		log.Info("Updated Kubernetes Secret", "name", existingSecret.Name)
 	}
 
-	if !onlyImportRemote && awsSecretExists {
-		needsAwsUpdate := false
+	if !onlyImportRemote {
+		needsAwsUpdate := true
+		if awsSecretExists {
+			needsAwsUpdate = false
 
-		// Prepare data for AWS update, excluding onlyImportRemote keys
-		awsUpdateData := make(map[string][]byte)
-		for k, v := range secretData {
-			// Check if this key has onlyImportRemote=true
-			if dataSource, exists := aSecret.Spec.Data[k]; exists &&
-				dataSource.OnlyImportRemote != nil && *dataSource.OnlyImportRemote {
-				// Skip onlyImportRemote keys - they shouldn't be written back to AWS
-				continue
+			// Prepare data for AWS update, excluding onlyImportRemote keys
+			awsUpdateData := make(map[string][]byte)
+			for k, v := range secretData {
+				// Check if this key has onlyImportRemote=true
+				if dataSource, exists := aSecret.Spec.Data[k]; exists &&
+					dataSource.OnlyImportRemote != nil && *dataSource.OnlyImportRemote {
+					// Skip onlyImportRemote keys - they shouldn't be written back to AWS
+					continue
+				}
+				awsUpdateData[k] = v
 			}
-			awsUpdateData[k] = v
-		}
 
-		// Check for keys that exist in secretData but not in AWS
-		for k := range secretData {
-			if _, exists := awsSecretData[k]; !exists {
-				needsAwsUpdate = true
-				break
-			}
-		}
-
-		// Check for keys that exist in AWS but not in secretData
-		if !needsAwsUpdate {
-			for k := range awsSecretData {
-				if _, exists := secretData[k]; !exists {
+			// Check for keys that exist in secretData but not in AWS
+			for k := range secretData {
+				if _, exists := awsSecretData[k]; !exists {
 					needsAwsUpdate = true
 					break
+				}
+			}
+
+			// Check for keys that exist in AWS but not in secretData
+			if !needsAwsUpdate {
+				for k := range awsSecretData {
+					if _, exists := secretData[k]; !exists {
+						needsAwsUpdate = true
+						break
+					}
 				}
 			}
 		}
@@ -229,6 +232,8 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			}
 			log.Info("Updated AWS Secret", "name", existingSecret.Name)
 		}
+	} else {
+		log.V(1).Info("OnlyImportRemote set, nothing updated on AWS Secret", "name", existingSecret.Name)
 	}
 
 	// Update status
