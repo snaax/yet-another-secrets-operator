@@ -34,10 +34,10 @@ jobs:
         run: |
           VERSION=$(grep 'version:' chart/yet-another-secrets-operator/Chart.yaml | awk '{print $2}')
           APP_VERSION=$(grep 'appVersion:' chart/yet-another-secrets-operator/Chart.yaml | awk '{print $2}')
-          
+
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "app_version=${APP_VERSION}" >> $GITHUB_OUTPUT
-          
+
           # If this is a tag push, use that as version
           if [[ $GITHUB_REF == refs/tags/v* ]]; then
             TAG=${GITHUB_REF#refs/tags/v}
@@ -76,13 +76,27 @@ jobs:
         with:
           version: 'latest'
 
+      # Clear Helm cache and force fresh operations
+      - name: Clear Helm cache
+        run: |
+          # Remove Helm cache directories
+          rm -rf ~/.cache/helm
+          rm -rf ~/.config/helm
+          rm -rf ~/.local/share/helm
+
+          # Clear any existing repositories
+          helm repo list | tail -n +2 | awk '{print $1}' | xargs -r helm repo remove || true
+
+          # Update helm repositories
+          helm repo update
+
       # Update chart values with correct image reference
       - name: Update Helm chart values
         run: |
           # Update values.yaml with the correct image reference
           sed -i "s|repository: example/another-secrets-operator|repository: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}|g" chart/yet-another-secrets-operator/values.yaml
           sed -i "s|tag: latest|tag: ${{ steps.chart_version.outputs.app_version }}|g" chart/yet-another-secrets-operator/values.yaml
-          
+
           # Update chart version if this is a tag push
           if [[ $GITHUB_REF == refs/tags/v* ]]; then
             sed -i "s|version: .*|version: ${{ steps.chart_version.outputs.version }}|g" chart/yet-another-secrets-operator/Chart.yaml
@@ -92,20 +106,33 @@ jobs:
       # Package Helm chart
       - name: Package Helm chart
         run: |
+          # Clean any previous packages
+          rm -rf .cr-release-packages
           mkdir -p .cr-release-packages
+
+          # Package with dependency update to force fresh resolution
+          helm dependency update chart/yet-another-secrets-operator || true
           helm package chart/yet-another-secrets-operator --destination .cr-release-packages
 
       # Publish Helm chart to GHCR
       - name: Create and publish Helm repository
         run: |
-          # Create index file
-          helm repo index .cr-release-packages --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/charts
-          
+          # Create index file with timestamp to force updates
+          TIMESTAMP=$(date +%s)
+          helm repo index .cr-release-packages \
+            --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/charts \
+            --merge ./public/charts/index.yaml 2>/dev/null || \
+          helm repo index .cr-release-packages \
+            --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/charts
+
           # Deploy to GitHub Pages
           mkdir -p public/charts
           cp .cr-release-packages/*.tgz public/charts/
           cp .cr-release-packages/index.yaml public/charts/
-          
+
+          # Add cache-busting headers hint file
+          echo "Cache-Control: no-cache, no-store, must-revalidate" > public/charts/.htaccess
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:

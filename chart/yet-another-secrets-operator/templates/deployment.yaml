@@ -37,14 +37,6 @@ spec:
             - --aws-region={{ .Values.aws.region }}
             {{- end }}
             - --remove-remote-keys={{ .Values.aws.removeRemoteKeys }}
-            {{- if .Values.aws.kms }}
-            - --aws-default-kms-key-id={{ .Values.aws.kms.keyId }}
-            {{- else if .Values.aws.kms.configMap }}
-            {{- $configMap := lookup "v1" "ConfigMap" .Values.aws.kms.configMap.namespace .Values.aws.kms.configMap.name }}
-            {{- if $configMap }}
-            - --aws-default-kms-key-id={{ index $configMap.data .Values.aws.kms.configMap.key }}
-            {{- end }}
-            {{- end }}
             {{- if .Values.leaderElection.enabled }}
             - --leader-elect=true
             {{- end }}
@@ -55,6 +47,23 @@ spec:
             {{- if .Values.aws.region }}
             - name: AWS_REGION
               value: {{ .Values.aws.region }}
+            {{- end }}
+            {{- if .Values.aws.kms }}
+            - name: AWS_DEFAULT_KMS_KEY_ID
+            {{- if .Values.aws.kms.keyId }}
+              value: {{ .Values.aws.kms.keyId }}
+            {{- else if .Values.aws.kms.configMap.name }}
+            {{- $configMap := lookup "v1" "ConfigMap" .Values.aws.kms.configMap.namespace .Values.aws.kms.configMap.name }}
+            {{- if $configMap }}
+            {{- if hasKey $configMap.data .Values.aws.kms.configMap.key }}
+              value: {{ index $configMap.data .Values.aws.kms.configMap.key }}
+            {{- else }}
+            {{- fail (printf "Key '%s' not found in ConfigMap '%s/%s'" .Values.aws.kms.configMap.key $namespace .Values.aws.kms.configMap.name) }}
+            {{- end }}
+            {{- else }}
+            {{- fail (printf "ConfigMap '%s/%s' not found" $namespace .Values.aws.kms.configMap.name) }}
+            {{- end }}
+            {{- end }}
             {{- end }}
             {{- if .Values.aws.tags }}
             {{- range $key, $value := .Values.aws.tags }}
