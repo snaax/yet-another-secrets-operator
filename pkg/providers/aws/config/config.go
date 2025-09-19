@@ -71,6 +71,7 @@ func (c *OperatorConfig) AddFlags(flags *pflag.FlagSet) {
 	flags.StringVar(&c.AWS.EndpointURL, "aws-endpoint", c.AWS.EndpointURL, "Custom AWS endpoint URL")
 	flags.IntVar(&c.AWS.MaxRetries, "aws-max-retries", c.AWS.MaxRetries, "Maximum number of AWS API retries")
 	flags.BoolVar(&c.AWS.RemoveRemoteKeys, "remove-remote-keys", c.AWS.RemoveRemoteKeys, "Remove remote keys if they don't exist in the CR.")
+	flags.StringVar(&c.AWS.DefaultKmsKeyId, "aws-default-kms-key-id", c.AWS.DefaultKmsKeyId, "Default KMS key ID for encryption")
 
 	// Health and metrics flags
 	flags.StringVar(&c.Health.ProbeBindAddress, "health-probe-bind-address", c.Health.ProbeBindAddress, "The address the probe endpoint binds to.")
@@ -93,6 +94,11 @@ func (c *OperatorConfig) LoadFromEnv() {
 	// AWS Endpoint URL
 	if c.AWS.EndpointURL == "" {
 		c.AWS.EndpointURL = os.Getenv("AWS_ENDPOINT_URL")
+	}
+
+	// AWS Default KMS Key ID
+	if c.AWS.DefaultKmsKeyId == "" {
+		c.AWS.DefaultKmsKeyId = os.Getenv("AWS_DEFAULT_KMS_KEY_ID")
 	}
 
 	// Load tags from environment variables
@@ -125,6 +131,7 @@ func (c *OperatorConfig) ToAWSConfig() AWSConfig {
 		EndpointURL:      c.AWS.EndpointURL,
 		MaxRetries:       c.AWS.MaxRetries,
 		RemoveRemoteKeys: c.AWS.RemoveRemoteKeys,
+		DefaultKmsKeyId:  c.AWS.DefaultKmsKeyId,
 		Tags:             c.AWS.Tags,
 	}
 }
