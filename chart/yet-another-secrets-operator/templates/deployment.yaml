@@ -42,6 +42,8 @@ spec:
             {{- $configMap := lookup "v1" "ConfigMap" .Values.aws.kms.configMap.namespace .Values.aws.kms.configMap.name }}
             {{- if $configMap }}
             - --aws-default-kms-key-id={{ index $configMap.data .Values.aws.kms.configMap.key }}
+            {{- else }}
+            {{- fail (printf "ConfigMap '%s/%s' not found" $namespace .Values.aws.kms.configMap.name) }}
             {{- end }}
             {{- end }}
             - --remove-remote-keys={{ .Values.aws.removeRemoteKeys }}
