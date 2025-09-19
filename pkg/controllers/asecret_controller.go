@@ -297,7 +297,7 @@ func (r *ASecretReconciler) getAwsSecret(ctx context.Context, smClient *secretsm
 		return nil, true, err
 	}
 
-	log.Info("Successfully retrieved AWS secret", "path", secretID, "keys", len(secretData))
+	log.V(1).Info("Successfully retrieved AWS secret", "path", secretID, "keys", len(secretData))
 	return secretData, true, nil
 }
 
@@ -350,12 +350,22 @@ func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClien
 				Tags:         tags,
 			}
 
-			// Add KMS key if specified
+			// Determine which KMS key to use (priority: ASecret spec > global config)
+			var kmsKeyId string
 			if aSecret.Spec.KmsKeyId != "" {
-				createInput.KmsKeyId = aws.String(aSecret.Spec.KmsKeyId)
-				log.Info("Creating AWS secret with custom KMS key", "path", secretPath, "kmsKeyId", aSecret.Spec.KmsKeyId)
+				// Use ASecret-specific KMS key
+				kmsKeyId = aSecret.Spec.KmsKeyId
+				log.V(1).Info("Using ASecret-specific KMS key", "path", secretPath, "kmsKeyId", kmsKeyId)
+			} else if r.AwsClient.Config.DefaultKmsKeyId != "" {
+				// Use global default KMS key
+				kmsKeyId = r.AwsClient.Config.DefaultKmsKeyId
+				log.V(1).Info("Using global default KMS key", "path", secretPath, "kmsKeyId", kmsKeyId)
+			}
+
+			if kmsKeyId != "" {
+				createInput.KmsKeyId = aws.String(kmsKeyId)
 			} else {
-				log.Info("Creating AWS secret with default encryption", "path", secretPath)
+				log.V(1).Info("Creating AWS secret with default encryption", "path", secretPath)
 			}
 
 			_, err = smClient.CreateSecret(ctx, createInput)

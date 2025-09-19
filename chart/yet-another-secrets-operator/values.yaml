@@ -27,6 +27,8 @@ serviceAccount:
 aws:
   region: ""
   removeRemoteKeys: true
+  # Default KMS key ID for all secrets (can be overridden per ASecret)
+  defaultKmsKeyId: ""
   # tags:
   #   managed-by: yaso
 

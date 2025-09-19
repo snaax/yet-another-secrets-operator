@@ -35,7 +35,8 @@ helm install yet-another-secrets-operator ./yet-another-secrets-operator
 helm install yet-another-secrets-operator ./yet-another-secrets-operator \
   --set image.repository=your-registry/yet-another-secrets-operator \
   --set image.tag=v0.1.0 \
-  --set aws.region=us-west-2
+  --set aws.region=us-west-2 \
+  --set aws.defaultKmsKeyId=alias/my-secrets-key
 ```
 
 Or using a values file:
@@ -93,3 +94,4 @@ The following table lists the configurable parameters of the Yet Another Secrets
 | `replicaCount` | Number of operator replicas | `1` |
 | `aws.region` | AWS Region | `` |
 | `aws.removeRemoteKeys` | Remove remote keys if not in ASecret | `false` |
+| `aws.defaultKmsKeyId` | Default operator kms key to use | `` |

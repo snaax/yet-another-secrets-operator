@@ -36,6 +36,9 @@ spec:
             {{- if .Values.aws.region }}
             - --aws-region={{ .Values.aws.region }}
             {{- end }}
+            {{- if .Values.aws.defaultKmsKeyId }}
+            - --aws-default-kms-key-id={{ .Values.aws.defaultKmsKeyId }}
+            {{- end }}
             - --remove-remote-keys={{ .Values.aws.removeRemoteKeys }}
             {{- if .Values.leaderElection.enabled }}
             - --leader-elect=true

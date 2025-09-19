@@ -21,6 +21,7 @@ type AWSConfig struct {
 	EndpointURL      string
 	MaxRetries       int
 	RemoveRemoteKeys bool
+	DefaultKmsKeyId  string
 	Tags             map[string]string
 }
 
@@ -48,6 +49,7 @@ func NewDefaultConfig() *OperatorConfig {
 			EndpointURL:      "",
 			MaxRetries:       5,
 			RemoveRemoteKeys: true,
+			DefaultKmsKeyId:  "",
 			Tags:             defaultTags,
 		},
 		Health: HealthConfig{
