@@ -84,12 +84,6 @@ jobs:
           rm -rf ~/.config/helm
           rm -rf ~/.local/share/helm
 
-          # Clear any existing repositories
-          helm repo list | tail -n +2 | awk '{print $1}' | xargs -r helm repo remove || true
-
-          # Update helm repositories
-          helm repo update
-
       # Update chart values with correct image reference
       - name: Update Helm chart values
         run: |
