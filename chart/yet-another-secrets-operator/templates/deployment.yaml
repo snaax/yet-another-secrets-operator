@@ -58,6 +58,7 @@ spec:
                   name: {{ .Values.aws.kms.configMap.name }}
                   key: {{ .Values.aws.kms.configMap.key }}
             {{- end }}
+            {{- end }}
             {{- if .Values.aws.tags }}
             {{- range $key, $value := .Values.aws.tags }}
             - name: AWS_TAG_{{ $key | upper }}
