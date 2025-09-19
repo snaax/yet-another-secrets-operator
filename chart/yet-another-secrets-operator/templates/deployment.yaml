@@ -52,18 +52,11 @@ spec:
             - name: AWS_DEFAULT_KMS_KEY_ID
             {{- if .Values.aws.kms.keyId }}
               value: {{ .Values.aws.kms.keyId }}
-            {{- else if .Values.aws.kms.configMap.name }}
-            {{- $configMap := lookup "v1" "ConfigMap" .Values.aws.kms.configMap.namespace .Values.aws.kms.configMap.name }}
-            {{- if $configMap }}
-            {{- if hasKey $configMap.data .Values.aws.kms.configMap.key }}
-              value: {{ index $configMap.data .Values.aws.kms.configMap.key }}
-            {{- else }}
-            {{- fail (printf "Key '%s' not found in ConfigMap '%s/%s'" .Values.aws.kms.configMap.key .Values.aws.kms.configMap.namespace .Values.aws.kms.configMap.name) }}
-            {{- end }}
-            {{- else }}
-            {{- fail (printf "ConfigMap '%s/%s' not found" .Values.aws.kms.configMap.namespace .Values.aws.kms.configMap.name) }}
-            {{- end }}
-            {{- end }}
+            {{- else if and .Values.aws.kms.configMap .Values.aws.kms.configMap.name .Values.aws.kms.configMap.key }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.aws.kms.configMap.name }}
+                  key: {{ .Values.aws.kms.configMap.key }}
             {{- end }}
             {{- if .Values.aws.tags }}
             {{- range $key, $value := .Values.aws.tags }}

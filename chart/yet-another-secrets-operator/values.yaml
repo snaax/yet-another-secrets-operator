@@ -33,7 +33,6 @@ aws:
     # Load kms keyId from configMap
     configMap:
       name: ""
-      namespace: ""
       key: ""
   # tags:
   #   managed-by: yaso
