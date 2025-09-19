@@ -34,7 +34,7 @@ helm install yet-another-secrets-operator ./yet-another-secrets-operator
 # Install with custom values
 helm install yet-another-secrets-operator ./yet-another-secrets-operator \
   --set image.repository=your-registry/yet-another-secrets-operator \
-  --set image.tag=v0.1.0 \
+  --set image.tag=v0.1.1 \
   --set aws.region=us-west-2 \
   --set aws.defaultKmsKeyId=alias/my-secrets-key
 ```

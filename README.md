@@ -117,7 +117,7 @@ The following table lists the configurable parameters of the Yet Another Secrets
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `image.repository` | Image repository | `ghcr.io/snaax/yet-another-secrets-operator` |
-| `image.tag` | Image tag | `0.1.0` |
+| `image.tag` | Image tag | `0.1.1` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `image.pullSecrets` | List of image pull secrets | `[]` |
 | `replicaCount` | Number of operator replicas | `1` |
