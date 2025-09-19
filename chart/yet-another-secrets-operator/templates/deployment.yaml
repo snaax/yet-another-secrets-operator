@@ -58,10 +58,10 @@ spec:
             {{- if hasKey $configMap.data .Values.aws.kms.configMap.key }}
               value: {{ index $configMap.data .Values.aws.kms.configMap.key }}
             {{- else }}
-            {{- fail (printf "Key '%s' not found in ConfigMap '%s/%s'" .Values.aws.kms.configMap.key $namespace .Values.aws.kms.configMap.name) }}
+            {{- fail (printf "Key '%s' not found in ConfigMap '%s/%s'" .Values.aws.kms.configMap.key .Values.aws.kms.configMap.namespace .Values.aws.kms.configMap.name) }}
             {{- end }}
             {{- else }}
-            {{- fail (printf "ConfigMap '%s/%s' not found" $namespace .Values.aws.kms.configMap.name) }}
+            {{- fail (printf "ConfigMap '%s/%s' not found" .Values.aws.kms.configMap.namespace .Values.aws.kms.configMap.name) }}
             {{- end }}
             {{- end }}
             {{- end }}
