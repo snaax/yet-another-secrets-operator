@@ -68,7 +68,7 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// Check if the secret exists in AWS SecretsManager
-	awsSecretData, awsSecretExists, err := r.getAwsSecret(ctx, smClient, aSecret.Spec, log)
+	awsSecretData, awsSecretExists, err := r.getAwsSecret(ctx, smClient, &aSecret, log)
 	if err != nil {
 		log.Error(err, "Failed to check AWS SecretsManager")
 		return ctrl.Result{RequeueAfter: time.Second * 30}, err
@@ -257,11 +257,11 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 }
 
 // getAwsSecret gets a secret from AWS SecretsManager
-func (r *ASecretReconciler) getAwsSecret(ctx context.Context, smClient *secretsmanager.Client, secret *secretsv1alpha1.ASecretSpec, log logr.Logger) (map[string]string, bool, error) {
+func (r *ASecretReconciler) getAwsSecret(ctx context.Context, smClient *secretsmanager.Client, secret *secretsv1alpha1.ASecret, log logr.Logger) (map[string]string, bool, error) {
 	// Ensure the secret path is formatted correctly
 	// AWS expects paths to begin with 'secret/' for hierarchical paths in some cases
 	// but we'll use the path as-is and log details if there's a failure
-	secretID := secret.AwsSecretPath
+	secretID := secret.Spec.AwsSecretPath
 
 	input := &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretID),
@@ -297,7 +297,7 @@ func (r *ASecretReconciler) getAwsSecret(ctx context.Context, smClient *secretsm
 	}
 
 	// If the user wants plain JSON, return as "json" key
-	if secret.ValueType == "json" {
+	if secret.Spec.ValueType == "json" {
 		log.V(1).Info("Successfully retrieved Json AWS secret", "path", secretID)
 		return map[string]string{"json": *result.SecretString}, true, nil
 	}
