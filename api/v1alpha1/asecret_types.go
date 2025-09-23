@@ -29,6 +29,12 @@ type ASecretSpec struct {
 	// OnlyImportRemote imports all values from remote provider only, do not create if missing
 	// +optional
 	OnlyImportRemote *bool `json:"onlyImportRemote,omitempty"`
+
+	// ValueType specifies how the secret should be stored in AWS SecretsManager.
+	// Allowed values: "kv" or "json". Default is "kv".
+	// +kubebuilder:validation:Enum=kv;json
+	// +optional
+	ValueType string `json:"valueType,omitempty"`
 }
 
 // DataSource defines the source of the secret data

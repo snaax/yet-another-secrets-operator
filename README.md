@@ -84,6 +84,31 @@ spec:
       onlyImportRemote: true  # Only import from AWS, don't create if missing
 ```
 
+## Storing Secrets as Plain JSON
+
+You can store an entire secret as plaintext JSON by setting `valueType: json` in the ASecret spec. This is useful when integrating with IaC tools like Terraform that write secrets as raw JSON.
+
+```yaml
+apiVersion: yet-another-secrets.io/v1alpha1
+kind: ASecret
+metadata:
+  name: json-app-secret
+spec:
+  targetSecretName: my-json-app-secret
+  awsSecretPath: /my-app/json
+  valueType: json
+  data:
+    json:
+      value: |
+        {
+          "key1": "value1",
+          "key2": "value2",
+          "list": [1, 2, 3]
+        }
+```
+When `valueType: json`, the operator will treat the secret as a single blob for both synchronize and import.
+```
+
 ### Import-Only Mode
 
 You can configure the operator to only import existing secrets from AWS without creating new ones:

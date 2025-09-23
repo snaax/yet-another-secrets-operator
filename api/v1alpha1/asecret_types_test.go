@@ -111,3 +111,43 @@ func TestASecretWithOnlyImportRemote(t *testing.T) {
 	assert.NotNil(t, secret.Spec.Data["existing-key"].OnlyImportRemote)
 	assert.True(t, *secret.Spec.Data["existing-key"].OnlyImportRemote)
 }
+
+func TestASecretValueTypeKV(t *testing.T) {
+	secret := &ASecret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-value-type-kv",
+			Namespace: "default",
+		},
+		Spec: ASecretSpec{
+			TargetSecretName: "my-secret",
+			AwsSecretPath:    "dev/myapp/secrets",
+			ValueType:        "kv",
+			Data: map[string]DataSource{
+				"username": {Value: "admin"},
+			},
+		},
+	}
+
+	assert.Equal(t, "kv", secret.Spec.ValueType)
+	assert.Contains(t, secret.Spec.Data, "username")
+}
+
+func TestASecretValueTypeJson(t *testing.T) {
+	secret := &ASecret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-value-type-json",
+			Namespace: "default",
+		},
+		Spec: ASecretSpec{
+			TargetSecretName: "my-secret",
+			AwsSecretPath:    "dev/myapp/jsonsecret",
+			ValueType:        "json",
+			Data: map[string]DataSource{
+				"json": {Value: `{"key":"value","another":"item"}`},
+			},
+		},
+	}
+
+	assert.Equal(t, "json", secret.Spec.ValueType)
+	assert.Equal(t, `{"key":"value","another":"item"}`, secret.Spec.Data["json"].Value)
+}
