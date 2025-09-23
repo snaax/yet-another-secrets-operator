@@ -296,10 +296,28 @@ func (r *ASecretReconciler) getAwsSecret(ctx context.Context, smClient *secretsm
 		return nil, true, fmt.Errorf("secret value is nil for %s", secretID)
 	}
 
-	// If the user wants plain JSON, return as "json" key
 	if secret.Spec.ValueType == "json" {
-		log.V(1).Info("Successfully retrieved Json AWS secret", "path", secretID)
-		return map[string]string{"json": *result.SecretString}, true, nil
+		var obj map[string]interface{}
+		if err := json.Unmarshal([]byte(*result.SecretString), &obj); err != nil {
+			log.Error(err, "Failed to unmarshal AWS secret as json object", "secretPath", secretID)
+			return nil, true, err
+		}
+		secretData := make(map[string]string)
+		for k, v := range obj {
+			switch t := v.(type) {
+			case string:
+				secretData[k] = t
+			default:
+				bytes, err := json.Marshal(t)
+				if err != nil {
+					secretData[k] = fmt.Sprintf("%v", t)
+				} else {
+					secretData[k] = string(bytes)
+				}
+			}
+		}
+		log.V(1).Info("Successfully retrieved JSON AWS secret", "path", secretID, "keys", len(secretData))
+		return secretData, true, nil
 	}
 
 	var secretData map[string]string
@@ -318,12 +336,19 @@ func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClien
 	var err error
 
 	if aSecret.Spec.ValueType == "json" {
-		// Take value from "json" key if present, else use empty string
-		jsonVal := ""
-		if v, exists := data["json"]; exists {
-			jsonVal = string(v)
+		obj := make(map[string]interface{})
+		for k, v := range data {
+			var vObj interface{}
+			if json.Unmarshal(v, &vObj) == nil {
+				obj[k] = vObj
+			} else {
+				obj[k] = string(v)
+			}
 		}
-		secretString = []byte(jsonVal)
+		secretString, err = json.Marshal(obj)
+		if err != nil {
+			return err
+		}
 	} else {
 		// legacy: marshal as object/map
 		stringData := make(map[string]string)
