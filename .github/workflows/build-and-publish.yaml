@@ -58,6 +58,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Run tests
+      - name: Run Go tests
+        run: |
+          go test ./pkg/... ./api/... -v -coverprofile cover.out
+          go tool cover -html=cover.out -o coverage.html
+
       # Build and push Docker image
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
