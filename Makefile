@@ -45,42 +45,37 @@ update-helm-crds: manifests ## Update Helm chart CRDs while preserving template 
 	@mv chart/yet-another-secrets-operator/templates/crds.yaml.tmp chart/yet-another-secrets-operator/templates/crds.yaml
 	@echo "Helm chart CRDs updated successfully"
 
-# go-get-tool will 'go install' any package with specified version
-define go-get-tool
-@[ -f $(1) ] || { \
-set -e ;\
-TMP_DIR=$$(mktemp -d) ;\
-cd $$TMP_DIR ;\
-go mod init tmp ;\
-echo "Downloading $(2)" ;\
-go install $(2) ;\
-rm -rf $$TMP_DIR ;\
-}
-endef
-
-.PHONY: setup-envtest
-setup-envtest: ## Download setup-envtest locally if necessary.
-	$(call go-get-tool,$(SETUP_ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
-
-.PHONY: envtest
-envtest: setup-envtest ## Download and set up envtest binaries
-	@mkdir -p testbin
-	@echo "Setting up envtest binaries in testbin..."
-	@$(SETUP_ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir testbin
-
+# Run tests
 .PHONY: test
-test: generate manifests envtest ## Run tests
-	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use -p path $(ENVTEST_K8S_VERSION))" go test ./... -v
+test: manifests generate fmt vet envtest ## Run tests.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
+
+.PHONY: test-unit
+test-unit: ## Run unit tests only.
+	go test ./pkg/... ./api/... -v -coverprofile cover.out
+
+.PHONY: test-integration
+test-integration: manifests generate fmt vet envtest ## Run integration tests.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./tests/... -v
 
 .PHONY: test-coverage
-test-coverage: generate manifests envtest ## Run tests with coverage
-	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use -p path $(ENVTEST_K8S_VERSION))" go test ./... -v -coverprofile cover.out
+test-coverage: test-unit
+	go tool cover -html=cover.out -o coverage.html
 
-.PHONY: update-test-env
-update-test-env: ## Update the tests/suite_test.go to use the testbin directory
-	@echo "Updating test environment setup..."
-	@if grep -q "BinaryAssetsDirectory" tests/suite_test.go; then \
-		echo "BinaryAssetsDirectory already configured"; \
-	else \
-		sed -i -e 's/testEnv = \&envtest.Environment{/testEnv = \&envtest.Environment{\n\t\tBinaryAssetsDirectory: filepath.Join("..", "testbin"),/g' tests/suite_test.go; \
-	fi
+##@ Build Dependencies
+
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
+## Tool Binaries
+ENVTEST ?= $(LOCALBIN)/setup-envtest
+
+## Tool Versions
+ENVTEST_K8S_VERSION = 1.31.0
+
+.PHONY: envtest
+envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
+$(ENVTEST): $(LOCALBIN)
+	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest

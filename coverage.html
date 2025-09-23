@@ -1,0 +1,1440 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>v1alpha1: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/yaso/yet-another-secrets-operator/api/v1alpha1/agenerator_types.go (100.0%)</option>
+				
+				<option value="file1">github.com/yaso/yet-another-secrets-operator/api/v1alpha1/asecret_types.go (100.0%)</option>
+				
+				<option value="file2">github.com/yaso/yet-another-secrets-operator/api/v1alpha1/zz_generated.deepcopy.go (0.0%)</option>
+				
+				<option value="file3">github.com/yaso/yet-another-secrets-operator/pkg/controllers/agenerator_controller.go (83.3%)</option>
+				
+				<option value="file4">github.com/yaso/yet-another-secrets-operator/pkg/controllers/asecret_controller.go (0.0%)</option>
+				
+				<option value="file5">github.com/yaso/yet-another-secrets-operator/pkg/providers/aws/client/client.go (0.0%)</option>
+				
+				<option value="file6">github.com/yaso/yet-another-secrets-operator/pkg/providers/aws/config/config.go (0.0%)</option>
+				
+				<option value="file7">github.com/yaso/yet-another-secrets-operator/pkg/utils/utils.go (20.8%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package v1alpha1
+
+import (
+        metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// AGeneratorSpec defines the desired state of AGenerator
+type AGeneratorSpec struct {
+        // Length is the length of the generated value
+        // +optional
+        // +kubebuilder:default=16
+        // +kubebuilder:validation:Minimum=1
+        Length int `json:"length,omitempty"`
+
+        // IncludeUppercase specifies if uppercase letters should be included
+        // +optional
+        // +kubebuilder:default=true
+        IncludeUppercase bool `json:"includeUppercase,omitempty"`
+
+        // IncludeLowercase specifies if lowercase letters should be included
+        // +optional
+        // +kubebuilder:default=true
+        IncludeLowercase bool `json:"includeLowercase,omitempty"`
+
+        // IncludeNumbers specifies if numbers should be included
+        // +optional
+        // +kubebuilder:default=true
+        IncludeNumbers bool `json:"includeNumbers,omitempty"`
+
+        // IncludeSpecialChars specifies if special characters should be included
+        // +optional
+        // +kubebuilder:default=true
+        IncludeSpecialChars bool `json:"includeSpecialChars,omitempty"`
+
+        // SpecialChars defines the set of special characters to use
+        // +optional
+        // +kubebuilder:default="!@#$%^&amp;*()-_=+[]{}|;:,.&lt;&gt;?/"
+        SpecialChars string `json:"specialChars,omitempty"`
+}
+
+// AGeneratorStatus defines the observed state of AGenerator
+type AGeneratorStatus struct {
+        // Conditions represent the latest available observations
+        Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
+//+kubebuilder:resource:path=agenerators,scope=Cluster
+
+// AGenerator is the Schema for the agenerators API
+type AGenerator struct {
+        metav1.TypeMeta   `json:",inline"`
+        metav1.ObjectMeta `json:"metadata,omitempty"`
+
+        Spec   AGeneratorSpec   `json:"spec,omitempty"`
+        Status AGeneratorStatus `json:"status,omitempty"`
+}
+
+//+kubebuilder:object:root=true
+
+// AGeneratorList contains a list of AGenerator
+type AGeneratorList struct {
+        metav1.TypeMeta `json:",inline"`
+        metav1.ListMeta `json:"metadata,omitempty"`
+        Items           []AGenerator `json:"items"`
+}
+
+func init() <span class="cov8" title="1">{
+        SchemeBuilder.Register(&amp;AGenerator{}, &amp;AGeneratorList{})
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package v1alpha1
+
+import (
+        metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// ASecretSpec defines the desired state of ASecret
+type ASecretSpec struct {
+        // TargetSecretName is the name of the Kubernetes Secret to be created/managed
+        TargetSecretName string `json:"targetSecretName"`
+
+        // AwsSecretPath is the path in AWS SecretsManager where the secret is stored
+        AwsSecretPath string `json:"awsSecretPath"`
+
+        // KmsKeyId is the AWS KMS key ID or ARN to use for encrypting the secret in AWS Secrets Manager
+        // If not specified, uses the default AWS managed key
+        // +optional
+        KmsKeyId string `json:"kmsKeyId,omitempty"`
+
+        // Data contains the secret data. Each key must be a valid DNS subdomain name.
+        // Values can be hardcoded or generated using a generator reference
+        // +optional
+        Data map[string]DataSource `json:"data,omitempty"`
+
+        // Tags to apply to the AWS Secret (optional)
+        // +optional
+        Tags map[string]string `json:"tags,omitempty"`
+
+        // OnlyImportRemote imports all values from remote provider only, do not create if missing
+        // +optional
+        OnlyImportRemote *bool `json:"onlyImportRemote,omitempty"`
+}
+
+// DataSource defines the source of the secret data
+type DataSource struct {
+        // Value is the hardcoded value for this key
+        // +optional
+        Value string `json:"value,omitempty"`
+
+        // GeneratorRef refers to a AGenerator to generate values
+        // +optional
+        GeneratorRef *GeneratorReference `json:"generatorRef,omitempty"`
+
+        // OnlyImportRemote imports value from remote provider only, do not create if missing
+        // +optional
+        OnlyImportRemote *bool `json:"onlyImportRemote,omitempty"`
+}
+
+// GeneratorReference contains the reference to a generator
+type GeneratorReference struct {
+        // Name of the generator
+        Name string `json:"name"`
+}
+
+// ASecretStatus defines the observed state of ASecret
+type ASecretStatus struct {
+        // Conditions represent the latest available observations of the secret's state
+        Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+        // LastSyncTime is the last time the secret was synced with AWS
+        LastSyncTime metav1.Time `json:"lastSyncTime,omitempty"`
+}
+
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
+//+kubebuilder:resource:path=asecrets,scope=Namespaced
+
+// ASecret is the Schema for the asecrets API
+type ASecret struct {
+        metav1.TypeMeta   `json:",inline"`
+        metav1.ObjectMeta `json:"metadata,omitempty"`
+
+        Spec   ASecretSpec   `json:"spec,omitempty"`
+        Status ASecretStatus `json:"status,omitempty"`
+}
+
+//+kubebuilder:object:root=true
+
+// ASecretList contains a list of ASecret
+type ASecretList struct {
+        metav1.TypeMeta `json:",inline"`
+        metav1.ListMeta `json:"metadata,omitempty"`
+        Items           []ASecret `json:"items"`
+}
+
+func init() <span class="cov8" title="1">{
+        SchemeBuilder.Register(&amp;ASecret{}, &amp;ASecretList{})
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">//go:build !ignore_autogenerated
+
+/*
+Copyright © 2025 YASO Maintainer Team
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+// Code generated by controller-gen. DO NOT EDIT.
+
+package v1alpha1
+
+import (
+        "k8s.io/apimachinery/pkg/apis/meta/v1"
+        runtime "k8s.io/apimachinery/pkg/runtime"
+)
+
+// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *AGenerator) DeepCopyInto(out *AGenerator) <span class="cov0" title="0">{
+        *out = *in
+        out.TypeMeta = in.TypeMeta
+        in.ObjectMeta.DeepCopyInto(&amp;out.ObjectMeta)
+        out.Spec = in.Spec
+        in.Status.DeepCopyInto(&amp;out.Status)
+}</span>
+
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new AGenerator.
+func (in *AGenerator) DeepCopy() *AGenerator <span class="cov0" title="0">{
+        if in == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">out := new(AGenerator)
+        in.DeepCopyInto(out)
+        return out</span>
+}
+
+// DeepCopyObject is an autogenerated deepcopy function, copying the receiver, creating a new runtime.Object.
+func (in *AGenerator) DeepCopyObject() runtime.Object <span class="cov0" title="0">{
+        if c := in.DeepCopy(); c != nil </span><span class="cov0" title="0">{
+                return c
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *AGeneratorList) DeepCopyInto(out *AGeneratorList) <span class="cov0" title="0">{
+        *out = *in
+        out.TypeMeta = in.TypeMeta
+        in.ListMeta.DeepCopyInto(&amp;out.ListMeta)
+        if in.Items != nil </span><span class="cov0" title="0">{
+                in, out := &amp;in.Items, &amp;out.Items
+                *out = make([]AGenerator, len(*in))
+                for i := range *in </span><span class="cov0" title="0">{
+                        (*in)[i].DeepCopyInto(&amp;(*out)[i])
+                }</span>
+        }
+}
+
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new AGeneratorList.
+func (in *AGeneratorList) DeepCopy() *AGeneratorList <span class="cov0" title="0">{
+        if in == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">out := new(AGeneratorList)
+        in.DeepCopyInto(out)
+        return out</span>
+}
+
+// DeepCopyObject is an autogenerated deepcopy function, copying the receiver, creating a new runtime.Object.
+func (in *AGeneratorList) DeepCopyObject() runtime.Object <span class="cov0" title="0">{
+        if c := in.DeepCopy(); c != nil </span><span class="cov0" title="0">{
+                return c
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *AGeneratorSpec) DeepCopyInto(out *AGeneratorSpec) <span class="cov0" title="0">{
+        *out = *in
+}</span>
+
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new AGeneratorSpec.
+func (in *AGeneratorSpec) DeepCopy() *AGeneratorSpec <span class="cov0" title="0">{
+        if in == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">out := new(AGeneratorSpec)
+        in.DeepCopyInto(out)
+        return out</span>
+}
+
+// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *AGeneratorStatus) DeepCopyInto(out *AGeneratorStatus) <span class="cov0" title="0">{
+        *out = *in
+        if in.Conditions != nil </span><span class="cov0" title="0">{
+                in, out := &amp;in.Conditions, &amp;out.Conditions
+                *out = make([]v1.Condition, len(*in))
+                for i := range *in </span><span class="cov0" title="0">{
+                        (*in)[i].DeepCopyInto(&amp;(*out)[i])
+                }</span>
+        }
+}
+
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new AGeneratorStatus.
+func (in *AGeneratorStatus) DeepCopy() *AGeneratorStatus <span class="cov0" title="0">{
+        if in == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">out := new(AGeneratorStatus)
+        in.DeepCopyInto(out)
+        return out</span>
+}
+
+// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *ASecret) DeepCopyInto(out *ASecret) <span class="cov0" title="0">{
+        *out = *in
+        out.TypeMeta = in.TypeMeta
+        in.ObjectMeta.DeepCopyInto(&amp;out.ObjectMeta)
+        in.Spec.DeepCopyInto(&amp;out.Spec)
+        in.Status.DeepCopyInto(&amp;out.Status)
+}</span>
+
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new ASecret.
+func (in *ASecret) DeepCopy() *ASecret <span class="cov0" title="0">{
+        if in == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">out := new(ASecret)
+        in.DeepCopyInto(out)
+        return out</span>
+}
+
+// DeepCopyObject is an autogenerated deepcopy function, copying the receiver, creating a new runtime.Object.
+func (in *ASecret) DeepCopyObject() runtime.Object <span class="cov0" title="0">{
+        if c := in.DeepCopy(); c != nil </span><span class="cov0" title="0">{
+                return c
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *ASecretList) DeepCopyInto(out *ASecretList) <span class="cov0" title="0">{
+        *out = *in
+        out.TypeMeta = in.TypeMeta
+        in.ListMeta.DeepCopyInto(&amp;out.ListMeta)
+        if in.Items != nil </span><span class="cov0" title="0">{
+                in, out := &amp;in.Items, &amp;out.Items
+                *out = make([]ASecret, len(*in))
+                for i := range *in </span><span class="cov0" title="0">{
+                        (*in)[i].DeepCopyInto(&amp;(*out)[i])
+                }</span>
+        }
+}
+
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new ASecretList.
+func (in *ASecretList) DeepCopy() *ASecretList <span class="cov0" title="0">{
+        if in == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">out := new(ASecretList)
+        in.DeepCopyInto(out)
+        return out</span>
+}
+
+// DeepCopyObject is an autogenerated deepcopy function, copying the receiver, creating a new runtime.Object.
+func (in *ASecretList) DeepCopyObject() runtime.Object <span class="cov0" title="0">{
+        if c := in.DeepCopy(); c != nil </span><span class="cov0" title="0">{
+                return c
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *ASecretSpec) DeepCopyInto(out *ASecretSpec) <span class="cov0" title="0">{
+        *out = *in
+        if in.Data != nil </span><span class="cov0" title="0">{
+                in, out := &amp;in.Data, &amp;out.Data
+                *out = make(map[string]DataSource, len(*in))
+                for key, val := range *in </span><span class="cov0" title="0">{
+                        (*out)[key] = *val.DeepCopy()
+                }</span>
+        }
+        <span class="cov0" title="0">if in.Tags != nil </span><span class="cov0" title="0">{
+                in, out := &amp;in.Tags, &amp;out.Tags
+                *out = make(map[string]string, len(*in))
+                for key, val := range *in </span><span class="cov0" title="0">{
+                        (*out)[key] = val
+                }</span>
+        }
+        <span class="cov0" title="0">if in.OnlyImportRemote != nil </span><span class="cov0" title="0">{
+                in, out := &amp;in.OnlyImportRemote, &amp;out.OnlyImportRemote
+                *out = new(bool)
+                **out = **in
+        }</span>
+}
+
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new ASecretSpec.
+func (in *ASecretSpec) DeepCopy() *ASecretSpec <span class="cov0" title="0">{
+        if in == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">out := new(ASecretSpec)
+        in.DeepCopyInto(out)
+        return out</span>
+}
+
+// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *ASecretStatus) DeepCopyInto(out *ASecretStatus) <span class="cov0" title="0">{
+        *out = *in
+        if in.Conditions != nil </span><span class="cov0" title="0">{
+                in, out := &amp;in.Conditions, &amp;out.Conditions
+                *out = make([]v1.Condition, len(*in))
+                for i := range *in </span><span class="cov0" title="0">{
+                        (*in)[i].DeepCopyInto(&amp;(*out)[i])
+                }</span>
+        }
+        <span class="cov0" title="0">in.LastSyncTime.DeepCopyInto(&amp;out.LastSyncTime)</span>
+}
+
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new ASecretStatus.
+func (in *ASecretStatus) DeepCopy() *ASecretStatus <span class="cov0" title="0">{
+        if in == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">out := new(ASecretStatus)
+        in.DeepCopyInto(out)
+        return out</span>
+}
+
+// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *DataSource) DeepCopyInto(out *DataSource) <span class="cov0" title="0">{
+        *out = *in
+        if in.GeneratorRef != nil </span><span class="cov0" title="0">{
+                in, out := &amp;in.GeneratorRef, &amp;out.GeneratorRef
+                *out = new(GeneratorReference)
+                **out = **in
+        }</span>
+        <span class="cov0" title="0">if in.OnlyImportRemote != nil </span><span class="cov0" title="0">{
+                in, out := &amp;in.OnlyImportRemote, &amp;out.OnlyImportRemote
+                *out = new(bool)
+                **out = **in
+        }</span>
+}
+
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new DataSource.
+func (in *DataSource) DeepCopy() *DataSource <span class="cov0" title="0">{
+        if in == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">out := new(DataSource)
+        in.DeepCopyInto(out)
+        return out</span>
+}
+
+// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *GeneratorReference) DeepCopyInto(out *GeneratorReference) <span class="cov0" title="0">{
+        *out = *in
+}</span>
+
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new GeneratorReference.
+func (in *GeneratorReference) DeepCopy() *GeneratorReference <span class="cov0" title="0">{
+        if in == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">out := new(GeneratorReference)
+        in.DeepCopyInto(out)
+        return out</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package controllers
+
+import (
+        "context"
+
+        "github.com/go-logr/logr"
+        "k8s.io/apimachinery/pkg/api/errors"
+        "k8s.io/apimachinery/pkg/runtime"
+        ctrl "sigs.k8s.io/controller-runtime"
+        "sigs.k8s.io/controller-runtime/pkg/client"
+
+        secretsv1alpha1 "github.com/yaso/yet-another-secrets-operator/api/v1alpha1"
+        "github.com/yaso/yet-another-secrets-operator/pkg/utils"
+)
+
+// AGeneratorReconciler reconciles a AGenerator object
+type AGeneratorReconciler struct {
+        client.Client
+        Scheme *runtime.Scheme
+        Log    logr.Logger
+}
+
+//+kubebuilder:rbac:groups=yet-another-secrets.io,resources=agenerators,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=yet-another-secrets.io,resources=agenerators/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=yet-another-secrets.io,resources=agenerators/finalizers,verbs=update
+
+// Reconcile is part of the main kubernetes reconciliation loop
+func (r *AGeneratorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) <span class="cov8" title="1">{
+        log := r.Log.WithValues("agenerator", req.NamespacedName)
+        log.Info("Reconciling AGenerator")
+
+        // Fetch the AGenerator instance
+        var aGenerator secretsv1alpha1.AGenerator
+        if err := r.Get(ctx, req.NamespacedName, &amp;aGenerator); err != nil </span><span class="cov8" title="1">{
+                if errors.IsNotFound(err) </span><span class="cov8" title="1">{
+                        // Object not found, return
+                        return ctrl.Result{}, nil
+                }</span>
+                // Error reading the object - requeue the request.
+                <span class="cov0" title="0">return ctrl.Result{}, err</span>
+        }
+
+        // AGenerator is a passive object that is referenced by ASecret resources
+        // No active reconciliation is needed besides validation
+
+        // Validate the generator specification
+        <span class="cov8" title="1">if err := utils.ValidateGeneratorSpec(aGenerator.Spec); err != nil </span><span class="cov8" title="1">{
+                log.Error(err, "Invalid generator specification")
+                return ctrl.Result{}, err
+        }</span>
+
+        <span class="cov8" title="1">return ctrl.Result{}, nil</span>
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *AGeneratorReconciler) SetupWithManager(mgr ctrl.Manager) error <span class="cov0" title="0">{
+        return ctrl.NewControllerManagedBy(mgr).
+                For(&amp;secretsv1alpha1.AGenerator{}).
+                Complete(r)
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package controllers
+
+import (
+        "context" // Add standard errors package
+        "encoding/json"
+        "errors"
+        "fmt"
+        "os"
+        "time"
+
+        "github.com/aws/aws-sdk-go-v2/aws"
+        "github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+        smTypes "github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
+        "github.com/go-logr/logr"
+        corev1 "k8s.io/api/core/v1"
+        apierrors "k8s.io/apimachinery/pkg/api/errors" // Rename to avoid conflict
+        metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+        "k8s.io/apimachinery/pkg/runtime"
+        k8sTypes "k8s.io/apimachinery/pkg/types"
+        ctrl "sigs.k8s.io/controller-runtime"
+        "sigs.k8s.io/controller-runtime/pkg/client"
+        "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+        secretsv1alpha1 "github.com/yaso/yet-another-secrets-operator/api/v1alpha1"
+
+        awsclient "github.com/yaso/yet-another-secrets-operator/pkg/providers/aws/client"
+        "github.com/yaso/yet-another-secrets-operator/pkg/utils"
+)
+
+// ASecretReconciler reconciles a ASecret object
+type ASecretReconciler struct {
+        client.Client
+        Scheme         *runtime.Scheme
+        Log            logr.Logger
+        AwsClient      *awsclient.AwsClient
+        SecretsManager *secretsmanager.Client
+}
+
+//+kubebuilder:rbac:groups=yet-another-secrets.io,resources=asecrets,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=yet-another-secrets.io,resources=asecrets/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=yet-another-secrets.io,resources=asecrets/finalizers,verbs=update
+//+kubebuilder:rbac:groups=yet-another-secrets.io,resources=agenerators,verbs=get;list;watch
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
+
+// Reconcile is part of the main kubernetes reconciliation loop
+func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) <span class="cov0" title="0">{
+        log := r.Log.WithValues("asecret", req.NamespacedName)
+        log.V(1).Info("Reconciling ASecret") // Changed to V(1).Info for less verbose logs
+
+        // Fetch the ASecret instance
+        var aSecret secretsv1alpha1.ASecret
+        if err := r.Get(ctx, req.NamespacedName, &amp;aSecret); err != nil </span><span class="cov0" title="0">{
+                if apierrors.IsNotFound(err) </span><span class="cov0" title="0">{
+                        // Object not found, return. Created objects are automatically garbage collected.
+                        return ctrl.Result{}, nil
+                }</span>
+                // Error reading the object - requeue the request.
+                <span class="cov0" title="0">return ctrl.Result{}, err</span>
+        }
+
+        // Use the injected AWS  and client instead of creating a new one
+        <span class="cov0" title="0">awsClient := r.AwsClient
+        smClient := r.SecretsManager
+
+        // Log which credential provider is being used (useful for debugging)
+        if providerName, err := awsClient.GetCredentialProviderInfo(ctx, log); err == nil </span><span class="cov0" title="0">{
+                log.V(1).Info("AWS credential provider", "provider", providerName)
+        }</span>
+
+        // Check if the secret exists in AWS SecretsManager
+        <span class="cov0" title="0">awsSecretData, awsSecretExists, err := r.getAwsSecret(ctx, smClient, aSecret.Spec.AwsSecretPath, log)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Error(err, "Failed to check AWS SecretsManager")
+                return ctrl.Result{RequeueAfter: time.Second * 30}, err
+        }</span>
+
+        // Check if we should only import remote data (ignore local spec completely)
+        <span class="cov0" title="0">onlyImportRemote := aSecret.Spec.OnlyImportRemote != nil &amp;&amp; *aSecret.Spec.OnlyImportRemote
+
+        // Look for existing Kubernetes secret
+        existingSecret := &amp;corev1.Secret{}
+        namespacedName := k8sTypes.NamespacedName{
+                Namespace: req.Namespace,
+                Name:      aSecret.Spec.TargetSecretName,
+        }
+        kubeSecretExists := true
+        if err := r.Get(ctx, namespacedName, existingSecret); err != nil </span><span class="cov0" title="0">{
+                if apierrors.IsNotFound(err) </span><span class="cov0" title="0">{
+                        kubeSecretExists = false
+                        existingSecret = &amp;corev1.Secret{
+                                ObjectMeta: metav1.ObjectMeta{
+                                        Name:      aSecret.Spec.TargetSecretName,
+                                        Namespace: req.Namespace,
+                                },
+                        }
+                }</span> else<span class="cov0" title="0"> {
+                        log.Error(err, "Failed to get Secret")
+                        return ctrl.Result{}, err
+                }</span>
+        }
+
+        // Prepare the secret data
+        <span class="cov0" title="0">var secretData map[string][]byte
+
+        if onlyImportRemote </span><span class="cov0" title="0">{
+                // Only import from AWS, ignore all local specs and existing Kubernetes data
+                log.Info("OnlyImportRemote enabled - importing only from AWS")
+                secretData = make(map[string][]byte)
+
+                if awsSecretExists </span><span class="cov0" title="0">{
+                        for k, v := range awsSecretData </span><span class="cov0" title="0">{
+                                secretData[k] = []byte(v)
+                        }</span>
+                        <span class="cov0" title="0">log.Info("Imported data from AWS", "keys", len(secretData))</span>
+                } else<span class="cov0" title="0"> {
+                        log.Info("No AWS secret found and OnlyImportRemote is true - creating empty secret")
+                        // Create empty secret data when AWS secret doesn't exist
+                        secretData = make(map[string][]byte)
+                }</span>
+        } else<span class="cov0" title="0"> {
+                // Normal processing with merging logic
+                secretData = make(map[string][]byte)
+
+                // If Kubernetes secret exists, start with its data
+                if kubeSecretExists &amp;&amp; existingSecret.Data != nil </span><span class="cov0" title="0">{
+                        for k, v := range existingSecret.Data </span><span class="cov0" title="0">{
+                                secretData[k] = v
+                        }</span>
+                }
+
+                // If AWS secret exists, merge its data (AWS is first source of truth)
+                <span class="cov0" title="0">if awsSecretExists </span><span class="cov0" title="0">{
+                        for k, v := range awsSecretData </span><span class="cov0" title="0">{
+                                secretData[k] = []byte(v)
+                        }</span>
+                }
+
+                <span class="cov0" title="0">if awsClient.Config.RemoveRemoteKeys </span><span class="cov0" title="0">{
+                        // Track which keys are managed by this ASecret CR
+                        managedKeys := make(map[string]bool)
+                        for key := range aSecret.Spec.Data </span><span class="cov0" title="0">{
+                                managedKeys[key] = true
+                        }</span>
+
+                        // Remove keys that are no longer in the ASecret spec (pruning)
+                        <span class="cov0" title="0">keysToDelete := []string{}
+                        for k := range secretData </span><span class="cov0" title="0">{
+                                if !managedKeys[k] </span><span class="cov0" title="0">{
+                                        keysToDelete = append(keysToDelete, k)
+                                }</span>
+                        }
+
+                        // Remove the keys marked for deletion
+                        <span class="cov0" title="0">for _, k := range keysToDelete </span><span class="cov0" title="0">{
+                                delete(secretData, k)
+                        }</span>
+                }
+
+                // Process ASecret data specifications (last source of truth)
+                <span class="cov0" title="0">if err := r.processASecretData(ctx, &amp;aSecret, secretData, log); err != nil </span><span class="cov0" title="0">{
+                        log.Error(err, "Failed to process ASecret data")
+                        return ctrl.Result{}, err
+                }</span>
+        }
+
+        // Create or update the Kubernetes secret
+        <span class="cov0" title="0">if !kubeSecretExists </span><span class="cov0" title="0">{
+                existingSecret.Data = secretData
+                existingSecret.Type = corev1.SecretTypeOpaque
+
+                // Set the ASecret as the owner of the Secret
+                if err := controllerutil.SetControllerReference(&amp;aSecret, existingSecret, r.Scheme); err != nil </span><span class="cov0" title="0">{
+                        log.Error(err, "Failed to set controller reference on Secret")
+                        return ctrl.Result{}, err
+                }</span>
+
+                <span class="cov0" title="0">if err := r.Create(ctx, existingSecret); err != nil </span><span class="cov0" title="0">{
+                        log.Error(err, "Failed to create Secret")
+                        return ctrl.Result{}, err
+                }</span>
+                <span class="cov0" title="0">log.Info("Created Kubernetes Secret", "name", existingSecret.Name)</span>
+        } else<span class="cov0" title="0"> {
+                // Update only if there are changes
+                existingSecret.Data = secretData
+                if err := r.Update(ctx, existingSecret); err != nil </span><span class="cov0" title="0">{
+                        log.Error(err, "Failed to update Secret")
+                        return ctrl.Result{}, err
+                }</span>
+                <span class="cov0" title="0">log.Info("Updated Kubernetes Secret", "name", existingSecret.Name)</span>
+        }
+
+        <span class="cov0" title="0">if !onlyImportRemote </span><span class="cov0" title="0">{
+                needsAwsUpdate := true
+                if awsSecretExists </span><span class="cov0" title="0">{
+                        needsAwsUpdate = false
+
+                        // Prepare data for AWS update, excluding onlyImportRemote keys
+                        awsUpdateData := make(map[string][]byte)
+                        for k, v := range secretData </span><span class="cov0" title="0">{
+                                // Check if this key has onlyImportRemote=true
+                                if dataSource, exists := aSecret.Spec.Data[k]; exists &amp;&amp;
+                                        dataSource.OnlyImportRemote != nil &amp;&amp; *dataSource.OnlyImportRemote </span><span class="cov0" title="0">{
+                                        // Skip onlyImportRemote keys - they shouldn't be written back to AWS
+                                        continue</span>
+                                }
+                                <span class="cov0" title="0">awsUpdateData[k] = v</span>
+                        }
+
+                        // Check for keys that exist in secretData but not in AWS
+                        <span class="cov0" title="0">for k := range secretData </span><span class="cov0" title="0">{
+                                if _, exists := awsSecretData[k]; !exists </span><span class="cov0" title="0">{
+                                        needsAwsUpdate = true
+                                        break</span>
+                                }
+                        }
+
+                        // Check for keys that exist in AWS but not in secretData
+                        <span class="cov0" title="0">if !needsAwsUpdate </span><span class="cov0" title="0">{
+                                for k := range awsSecretData </span><span class="cov0" title="0">{
+                                        if _, exists := secretData[k]; !exists </span><span class="cov0" title="0">{
+                                                needsAwsUpdate = true
+                                                break</span>
+                                        }
+                                }
+                        }
+                }
+
+                <span class="cov0" title="0">if needsAwsUpdate </span><span class="cov0" title="0">{
+                        if err := r.createOrUpdateAwsSecret(ctx, smClient, &amp;aSecret, secretData, log); err != nil </span><span class="cov0" title="0">{
+                                log.Error(err, "Failed to create AWS Secret")
+                                return ctrl.Result{}, err
+                        }</span>
+                        <span class="cov0" title="0">log.Info("Updated AWS Secret", "name", existingSecret.Name)</span>
+                }
+        } else<span class="cov0" title="0"> {
+                log.V(1).Info("OnlyImportRemote set, nothing updated on AWS Secret", "name", existingSecret.Name)
+        }</span>
+
+        // Update status
+        <span class="cov0" title="0">aSecret.Status.LastSyncTime = metav1.Now()
+        aSecret.Status.Conditions = []metav1.Condition{
+                {
+                        Type:               "Synced",
+                        Status:             metav1.ConditionTrue,
+                        LastTransitionTime: metav1.Now(),
+                        Reason:             "ReconciliationSucceeded",
+                        Message:            "Secret successfully synced",
+                },
+        }
+
+        if err := r.Status().Update(ctx, &amp;aSecret); err != nil </span><span class="cov0" title="0">{
+                log.Error(err, "Failed to update ASecret status")
+                return ctrl.Result{}, err
+        }</span>
+
+        <span class="cov0" title="0">return ctrl.Result{RequeueAfter: time.Hour}, nil</span>
+}
+
+// getAwsSecret gets a secret from AWS SecretsManager
+func (r *ASecretReconciler) getAwsSecret(ctx context.Context, smClient *secretsmanager.Client, secretPath string, log logr.Logger) (map[string]string, bool, error) <span class="cov0" title="0">{
+        // Ensure the secret path is formatted correctly
+        // AWS expects paths to begin with 'secret/' for hierarchical paths in some cases
+        // but we'll use the path as-is and log details if there's a failure
+        secretID := secretPath
+
+        input := &amp;secretsmanager.GetSecretValueInput{
+                SecretId: aws.String(secretID),
+        }
+
+        log.V(1).Info("Getting AWS secret", "path", secretID)
+        result, err := smClient.GetSecretValue(ctx, input)
+        if err != nil </span><span class="cov0" title="0">{
+                // Check if it's a resource not found error
+                var resourceNotFound *smTypes.ResourceNotFoundException
+                if errors.As(err, &amp;resourceNotFound) </span><span class="cov0" title="0">{
+                        log.Info("AWS secret not found", "path", secretID)
+                        return nil, false, nil
+                }</span>
+
+                // If it's an endpoint resolution error, log more details
+                <span class="cov0" title="0">if err.Error() == "not found, ResolveEndpointV2" </span><span class="cov0" title="0">{
+                        log.Error(err, "Failed to resolve AWS endpoint - check AWS region and endpoint configuration",
+                                "secretPath", secretID,
+                                "region", os.Getenv("AWS_REGION"))
+
+                        return nil, false, fmt.Errorf("AWS endpoint resolution failed for secret %s: %w", secretID, err)
+                }</span>
+
+                <span class="cov0" title="0">log.Error(err, "Failed to get AWS secret", "secretPath", secretID)
+                return nil, false, err</span>
+        }
+
+        // Successfully got the secret, now parse it
+        <span class="cov0" title="0">var secretData map[string]string
+        if result.SecretString == nil </span><span class="cov0" title="0">{
+                log.Error(nil, "AWS secret value is nil", "secretPath", secretID)
+                return nil, true, fmt.Errorf("secret value is nil for %s", secretID)
+        }</span>
+
+        <span class="cov0" title="0">if err := json.Unmarshal([]byte(*result.SecretString), &amp;secretData); err != nil </span><span class="cov0" title="0">{
+                log.Error(err, "Failed to unmarshal AWS secret", "secretPath", secretID)
+                return nil, true, err
+        }</span>
+
+        <span class="cov0" title="0">log.V(1).Info("Successfully retrieved AWS secret", "path", secretID, "keys", len(secretData))
+        return secretData, true, nil</span>
+}
+
+// createOrUpdateAwsSecret creates or updates a secret in AWS SecretsManager
+func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClient *secretsmanager.Client, aSecret *secretsv1alpha1.ASecret, data map[string][]byte, log logr.Logger) error <span class="cov0" title="0">{
+        // Convert binary data to string
+        stringData := make(map[string]string)
+        for k, v := range data </span><span class="cov0" title="0">{
+                stringData[k] = string(v)
+        }</span>
+
+        <span class="cov0" title="0">secretString, err := json.Marshal(stringData)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">secretPath := aSecret.Spec.AwsSecretPath
+
+        // Check if secret exists
+        _, err = smClient.DescribeSecret(ctx, &amp;secretsmanager.DescribeSecretInput{
+                SecretId: aws.String(secretPath),
+        })
+
+        // Convert tags configuration to AWS Tags
+        var tags []smTypes.Tag
+        for k, v := range r.AwsClient.Config.Tags </span><span class="cov0" title="0">{
+                tags = append(tags, smTypes.Tag{
+                        Key:   aws.String(k),
+                        Value: aws.String(v),
+                })
+        }</span>
+
+        // Add ASecret spec tags if provided
+        <span class="cov0" title="0">if aSecret.Spec.Tags != nil </span><span class="cov0" title="0">{
+                for k, v := range aSecret.Spec.Tags </span><span class="cov0" title="0">{
+                        tags = append(tags, smTypes.Tag{
+                                Key:   aws.String(k),
+                                Value: aws.String(v),
+                        })
+                }</span>
+        }
+
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                // Create new secret if it doesn't exist
+                var resourceNotFound *smTypes.ResourceNotFoundException
+                if errors.As(err, &amp;resourceNotFound) </span><span class="cov0" title="0">{
+                        createInput := &amp;secretsmanager.CreateSecretInput{
+                                Name:         aws.String(secretPath),
+                                SecretString: aws.String(string(secretString)),
+                                Tags:         tags,
+                        }
+
+                        // Determine which KMS key to use (priority: ASecret spec &gt; global config)
+                        var kmsKeyId string
+                        if aSecret.Spec.KmsKeyId != "" </span><span class="cov0" title="0">{
+                                // Use ASecret-specific KMS key
+                                kmsKeyId = aSecret.Spec.KmsKeyId
+                                log.V(1).Info("Using ASecret-specific KMS key", "path", secretPath, "kmsKeyId", kmsKeyId)
+                        }</span> else<span class="cov0" title="0"> if r.AwsClient.Config.DefaultKmsKeyId != "" </span><span class="cov0" title="0">{
+                                // Use global default KMS key
+                                kmsKeyId = r.AwsClient.Config.DefaultKmsKeyId
+                                log.V(1).Info("Using global default KMS key", "path", secretPath, "kmsKeyId", kmsKeyId)
+                        }</span>
+
+                        <span class="cov0" title="0">if kmsKeyId != "" </span><span class="cov0" title="0">{
+                                createInput.KmsKeyId = aws.String(kmsKeyId)
+                        }</span> else<span class="cov0" title="0"> {
+                                log.V(1).Info("Creating AWS secret with default encryption", "path", secretPath)
+                        }</span>
+
+                        <span class="cov0" title="0">_, err = smClient.CreateSecret(ctx, createInput)
+                        return err</span>
+                }
+                <span class="cov0" title="0">return err</span>
+        } else<span class="cov0" title="0"> {
+                // Update existing secret
+                _, err = smClient.PutSecretValue(ctx, &amp;secretsmanager.PutSecretValueInput{
+                        SecretId:     aws.String(secretPath),
+                        SecretString: aws.String(string(secretString)),
+                })
+
+                // If no error during update, also updates tags
+                if err == nil &amp;&amp; len(tags) &gt; 0 </span><span class="cov0" title="0">{
+                        _, err := smClient.TagResource(ctx, &amp;secretsmanager.TagResourceInput{
+                                SecretId: aws.String(secretPath),
+                                Tags:     tags,
+                        })
+
+                        return err
+                }</span>
+        }
+        <span class="cov0" title="0">return err</span>
+}
+
+// processASecretData processes the data from the ASecret, generating values as needed
+func (r *ASecretReconciler) processASecretData(ctx context.Context, aSecret *secretsv1alpha1.ASecret, secretData map[string][]byte, log logr.Logger) error <span class="cov0" title="0">{
+        for key, dataSource := range aSecret.Spec.Data </span><span class="cov0" title="0">{
+                // Handle onlyImportRemote flag - only import existing values, don't create new ones
+                if dataSource.OnlyImportRemote != nil &amp;&amp; *dataSource.OnlyImportRemote </span><span class="cov0" title="0">{
+                        // Skip processing - the value should only come from remote (AWS)
+                        // If it exists in secretData (from AWS), keep it; if not, don't create
+                        log.V(1).Info("Skipping key with onlyImportRemote=true", "key", key)
+                        continue</span>
+                }
+
+                // Skip if value already exists in the secret data (don't override existing values)
+                <span class="cov0" title="0">if _, exists := secretData[key]; exists </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+
+                // Use hardcoded value if specified
+                <span class="cov0" title="0">if dataSource.Value != "" </span><span class="cov0" title="0">{
+                        secretData[key] = []byte(dataSource.Value)
+                        continue</span>
+                }
+
+                // Generate value using generator if specified
+                <span class="cov0" title="0">if dataSource.GeneratorRef != nil </span><span class="cov0" title="0">{
+                        generatedValue, err := r.generateValue(ctx, dataSource.GeneratorRef.Name, log)
+                        if err != nil </span><span class="cov0" title="0">{
+                                return err
+                        }</span>
+                        <span class="cov0" title="0">secretData[key] = []byte(generatedValue)
+                        continue</span>
+                }
+        }
+        <span class="cov0" title="0">return nil</span>
+}
+
+// generateValue generates a value using the specified generator
+func (r *ASecretReconciler) generateValue(ctx context.Context, generatorName string, log logr.Logger) (string, error) <span class="cov0" title="0">{
+        // Get the generator
+        var generator secretsv1alpha1.AGenerator
+        if err := r.Get(ctx, k8sTypes.NamespacedName{Name: generatorName}, &amp;generator); err != nil </span><span class="cov0" title="0">{
+                log.Error(err, "Failed to get generator", "name", generatorName)
+                return "", err
+        }</span>
+
+        // Generate value based on generator spec
+        <span class="cov0" title="0">value, err := utils.GenerateRandomString(generator.Spec)
+        if err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+
+        <span class="cov0" title="0">return value, nil</span>
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *ASecretReconciler) SetupWithManager(mgr ctrl.Manager) error <span class="cov0" title="0">{
+        // Create the SecretsManager client during setup
+        var err error
+        ctx := context.Background()
+        r.SecretsManager, err = r.AwsClient.CreateSecretsManagerClient(ctx, r.Log)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to create AWS SecretsManager client: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">return ctrl.NewControllerManagedBy(mgr).
+                For(&amp;secretsv1alpha1.ASecret{}).
+                Owns(&amp;corev1.Secret{}).
+                Complete(r)</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package client
+
+import (
+        "context"
+        "fmt"
+        "os"
+
+        "github.com/aws/aws-sdk-go-v2/aws"
+        "github.com/aws/aws-sdk-go-v2/config"
+        "github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+        "github.com/go-logr/logr"
+
+        awsconfig "github.com/yaso/yet-another-secrets-operator/pkg/providers/aws/config"
+)
+
+// Client provides AWS operations
+type AwsClient struct {
+        Config awsconfig.AWSConfig
+}
+
+// NewClient creates a new AWS client
+func NewClient(config awsconfig.AWSConfig) *AwsClient <span class="cov0" title="0">{
+        return &amp;AwsClient{
+                Config: config,
+        }
+}</span>
+
+// CreateSecretsManagerClient creates a new AWS SecretsManager client
+func (c *AwsClient) CreateSecretsManagerClient(ctx context.Context, log logr.Logger) (*secretsmanager.Client, error) <span class="cov0" title="0">{
+        // Precedence: 1. Explicit config  2. Environment variables  3. Instance metadata
+        region := c.determineRegion()
+        endpoint := c.determineEndpoint()
+
+        log.Info("Using AWS configuration", "region", region, "customEndpoint", endpoint != "")
+
+        // Create basic config options
+        opts := []func(*config.LoadOptions) error{
+                config.WithRegion(region),
+                config.WithRetryMaxAttempts(c.Config.MaxRetries),
+        }
+
+        // Load configuration with explicit region
+        log.V(1).Info("Loading AWS configuration")
+        cfg, err := config.LoadDefaultConfig(ctx, opts...)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Error(err, "Failed to load AWS config")
+                return nil, err
+        }</span>
+
+        // Create SecretsManager client options
+        <span class="cov0" title="0">var clientOpts []func(*secretsmanager.Options)
+
+        // Set custom endpoint if specified
+        if endpoint != "" </span><span class="cov0" title="0">{
+                log.Info("Using custom endpoint URL", "endpoint", endpoint)
+                clientOpts = append(clientOpts, func(o *secretsmanager.Options) </span><span class="cov0" title="0">{
+                        o.BaseEndpoint = aws.String(endpoint)
+                }</span>)
+        }
+
+        // Create client with the options
+        <span class="cov0" title="0">smClient := secretsmanager.NewFromConfig(cfg, clientOpts...)
+
+        // Log the configured region
+        log.V(1).Info("AWS SecretsManager client created", "region", cfg.Region)
+
+        return smClient, nil</span>
+}
+
+// GetCredentialProviderInfo returns information about which credential provider was used
+func (c *AwsClient) GetCredentialProviderInfo(ctx context.Context, log logr.Logger) (string, error) <span class="cov0" title="0">{
+        // Determine the region to use
+        region := c.determineRegion()
+
+        cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
+        if err != nil </span><span class="cov0" title="0">{
+                log.Error(err, "Failed to load AWS config for credential check")
+                return "", err
+        }</span>
+
+        // Get credentials
+        <span class="cov0" title="0">creds, err := cfg.Credentials.Retrieve(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Error(err, "Failed to get AWS credentials info")
+                return "", err
+        }</span>
+
+        <span class="cov0" title="0">return creds.Source, nil</span>
+}
+
+// Add helper methods for determining configuration
+func (c *AwsClient) determineRegion() string <span class="cov0" title="0">{
+        // Explicit config has highest priority
+        if c.Config.Region != "" </span><span class="cov0" title="0">{
+                return c.Config.Region
+        }</span>
+
+        // Environment variables next
+        <span class="cov0" title="0">return awsconfig.GetDefaultRegion()</span>
+}
+
+func (c *AwsClient) determineEndpoint() string <span class="cov0" title="0">{
+        // Explicit config has highest priority
+        if c.Config.EndpointURL != "" </span><span class="cov0" title="0">{
+                return c.Config.EndpointURL
+        }</span>
+
+        // Environment variable next
+        <span class="cov0" title="0">return os.Getenv("AWS_ENDPOINT_URL")</span>
+}
+
+// TestConnection attempts to list secrets to verify connectivity
+func (c *AwsClient) TestConnection(ctx context.Context, log logr.Logger) error <span class="cov0" title="0">{
+        // Determine the region to use
+        region := c.determineRegion()
+
+        // Create basic config
+        opts := []func(*config.LoadOptions) error{
+                config.WithRegion(region),
+        }
+
+        log.Info("Testing AWS connectivity", "region", region)
+        cfg, err := config.LoadDefaultConfig(ctx, opts...)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Error(err, "Failed to load config for connectivity test")
+                return err
+        }</span>
+
+        // Create client
+        <span class="cov0" title="0">client := secretsmanager.NewFromConfig(cfg)
+
+        // Test with ListSecrets which is simpler than GetSecretValue
+        log.Info("Attempting to list secrets to verify connectivity")
+        resp, err := client.ListSecrets(ctx, &amp;secretsmanager.ListSecretsInput{
+                MaxResults: aws.Int32(1), // Only need one to verify connection
+        })
+
+        if err != nil </span><span class="cov0" title="0">{
+                log.Error(err, "Failed connectivity test")
+                return fmt.Errorf("AWS connectivity test failed: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">log.Info("AWS connectivity test succeeded", "secretCount", len(resp.SecretList))
+        return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package config
+
+import (
+        "os"
+        "strings"
+
+        "github.com/spf13/pflag"
+)
+
+// OperatorConfig holds all configuration for the operator
+type OperatorConfig struct {
+        AWS    AWSConfig
+        Health HealthConfig
+        Leader LeaderElectionConfig
+        Debug  bool
+}
+
+// AWSConfig holds AWS-specific configuration
+type AWSConfig struct {
+        Region           string
+        EndpointURL      string
+        MaxRetries       int
+        RemoveRemoteKeys bool
+        DefaultKmsKeyId  string
+        Tags             map[string]string
+}
+
+// HealthConfig holds health server configuration
+type HealthConfig struct {
+        ProbeBindAddress   string
+        MetricsBindAddress string
+}
+
+// LeaderElectionConfig holds leader election configuration
+type LeaderElectionConfig struct {
+        Enabled bool
+        ID      string
+}
+
+// NewDefaultConfig returns a config with default values
+func NewDefaultConfig() *OperatorConfig <span class="cov0" title="0">{
+        // Initialize default tags
+        defaultTags := make(map[string]string)
+        defaultTags["managed-by"] = "yaso"
+
+        return &amp;OperatorConfig{
+                AWS: AWSConfig{
+                        Region:           "",
+                        EndpointURL:      "",
+                        MaxRetries:       5,
+                        RemoveRemoteKeys: true,
+                        DefaultKmsKeyId:  "",
+                        Tags:             defaultTags,
+                },
+                Health: HealthConfig{
+                        ProbeBindAddress:   ":8081",
+                        MetricsBindAddress: ":8080",
+                },
+                Leader: LeaderElectionConfig{
+                        Enabled: false,
+                        ID:      "aso.yaso.io",
+                },
+                Debug: false,
+        }
+}</span>
+
+// AddFlags adds all config flags to the provided flag set
+func (c *OperatorConfig) AddFlags(flags *pflag.FlagSet) <span class="cov0" title="0">{
+        // AWS flags
+        flags.StringVar(&amp;c.AWS.Region, "aws-region", c.AWS.Region, "AWS Region to use")
+        flags.StringVar(&amp;c.AWS.EndpointURL, "aws-endpoint", c.AWS.EndpointURL, "Custom AWS endpoint URL")
+        flags.IntVar(&amp;c.AWS.MaxRetries, "aws-max-retries", c.AWS.MaxRetries, "Maximum number of AWS API retries")
+        flags.BoolVar(&amp;c.AWS.RemoveRemoteKeys, "remove-remote-keys", c.AWS.RemoveRemoteKeys, "Remove remote keys if they don't exist in the CR.")
+        flags.StringVar(&amp;c.AWS.DefaultKmsKeyId, "aws-default-kms-key-id", c.AWS.DefaultKmsKeyId, "Default KMS key ID for encryption")
+
+        // Health and metrics flags
+        flags.StringVar(&amp;c.Health.ProbeBindAddress, "health-probe-bind-address", c.Health.ProbeBindAddress, "The address the probe endpoint binds to.")
+        flags.StringVar(&amp;c.Health.MetricsBindAddress, "metrics-bind-address", c.Health.MetricsBindAddress, "The address the metrics endpoint binds to.")
+
+        // Leader election flags
+        flags.BoolVar(&amp;c.Leader.Enabled, "leader-elect", c.Leader.Enabled, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+
+        // Debug
+        flags.BoolVar(&amp;c.Debug, "debug", c.Debug, "Enable development mode of zap for logging extra informations.")
+}</span>
+
+// LoadFromEnv loads config values from environment variables
+func (c *OperatorConfig) LoadFromEnv() <span class="cov0" title="0">{
+        // AWS Region
+        if c.AWS.Region == "" </span><span class="cov0" title="0">{
+                c.AWS.Region = GetDefaultRegion()
+        }</span>
+
+        // AWS Endpoint URL
+        <span class="cov0" title="0">if c.AWS.EndpointURL == "" </span><span class="cov0" title="0">{
+                c.AWS.EndpointURL = os.Getenv("AWS_ENDPOINT_URL")
+        }</span>
+
+        // AWS Default KMS Key ID
+        <span class="cov0" title="0">if c.AWS.DefaultKmsKeyId == "" </span><span class="cov0" title="0">{
+                c.AWS.DefaultKmsKeyId = os.Getenv("AWS_DEFAULT_KMS_KEY_ID")
+        }</span>
+
+        // Load tags from environment variables
+        <span class="cov0" title="0">for _, env := range os.Environ() </span><span class="cov0" title="0">{
+                if strings.HasPrefix(env, "AWS_TAG_") </span><span class="cov0" title="0">{
+                        parts := strings.SplitN(env, "=", 2)
+                        if len(parts) == 2 </span><span class="cov0" title="0">{
+                                key := strings.TrimPrefix(parts[0], "AWS_TAG_")
+                                c.AWS.Tags[strings.ToLower(key)] = parts[1]
+                        }</span>
+                }
+        }
+}
+
+// getDefaultRegion tries to get an AWS region from environment variables
+func GetDefaultRegion() string <span class="cov0" title="0">{
+        possibleEnvVars := []string{"AWS_REGION", "AWS_DEFAULT_REGION"}
+        for _, envVar := range possibleEnvVars </span><span class="cov0" title="0">{
+                if region := os.Getenv(envVar); region != "" </span><span class="cov0" title="0">{
+                        return region
+                }</span>
+        }
+        <span class="cov0" title="0">return ""</span>
+}
+
+// ToAWSConfig converts the config to a format usable by controllers
+func (c *OperatorConfig) ToAWSConfig() AWSConfig <span class="cov0" title="0">{
+        return AWSConfig{
+                Region:           c.AWS.Region,
+                EndpointURL:      c.AWS.EndpointURL,
+                MaxRetries:       c.AWS.MaxRetries,
+                RemoveRemoteKeys: c.AWS.RemoveRemoteKeys,
+                DefaultKmsKeyId:  c.AWS.DefaultKmsKeyId,
+                Tags:             c.AWS.Tags,
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package utils
+
+import (
+        "crypto/rand"
+        "errors"
+        "fmt"
+        "math/big"
+
+        secretsv1alpha1 "github.com/yaso/yet-another-secrets-operator/api/v1alpha1"
+)
+
+// validateGeneratorSpec validates that the generator specification is valid
+func ValidateGeneratorSpec(spec secretsv1alpha1.AGeneratorSpec) error <span class="cov8" title="1">{
+        // Ensure at least one character type is enabled
+        if !spec.IncludeUppercase &amp;&amp; !spec.IncludeLowercase &amp;&amp; !spec.IncludeNumbers &amp;&amp; !spec.IncludeSpecialChars </span><span class="cov8" title="1">{
+                return errors.New("at least one character type (uppercase, lowercase, numbers, or special chars) must be enabled")
+        }</span>
+
+        // Ensure length is positive
+        <span class="cov8" title="1">if spec.Length &lt;= 0 </span><span class="cov8" title="1">{
+                return errors.New("length must be greater than 0")
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// generateRandomString generates a random string according to the generator specification
+func GenerateRandomString(spec secretsv1alpha1.AGeneratorSpec) (string, error) <span class="cov0" title="0">{
+        var chars string
+
+        if spec.IncludeUppercase </span><span class="cov0" title="0">{
+                chars += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        }</span>
+
+        <span class="cov0" title="0">if spec.IncludeLowercase </span><span class="cov0" title="0">{
+                chars += "abcdefghijklmnopqrstuvwxyz"
+        }</span>
+
+        <span class="cov0" title="0">if spec.IncludeNumbers </span><span class="cov0" title="0">{
+                chars += "0123456789"
+        }</span>
+
+        <span class="cov0" title="0">if spec.IncludeSpecialChars </span><span class="cov0" title="0">{
+                chars += spec.SpecialChars
+        }</span>
+
+        <span class="cov0" title="0">if len(chars) == 0 </span><span class="cov0" title="0">{
+                return "", errors.New("no character set defined for password generation")
+        }</span>
+
+        <span class="cov0" title="0">result := make([]byte, spec.Length)
+        maxVal := big.NewInt(int64(len(chars)))
+
+        for i := 0; i &lt; spec.Length; i++ </span><span class="cov0" title="0">{
+                randomIndex, err := rand.Int(rand.Reader, maxVal)
+                if err != nil </span><span class="cov0" title="0">{
+                        return "", fmt.Errorf("failed to generate random number: %v", err)
+                }</span>
+                <span class="cov0" title="0">result[i] = chars[randomIndex.Int64()]</span>
+        }
+
+        <span class="cov0" title="0">return string(result), nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
