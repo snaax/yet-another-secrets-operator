@@ -160,7 +160,13 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{RequeueAfter: time.Hour}, nil
+	// Compute per-secret refresh interval (defaults to 1h if not set)
+	requeue := time.Hour
+	if aSecret.Spec.RefreshInterval != nil && aSecret.Spec.RefreshInterval.Duration > 0 {
+		requeue = aSecret.Spec.RefreshInterval.Duration
+	}
+
+	return ctrl.Result{RequeueAfter: requeue}, nil
 }
 
 // prepareSecretData handles the logic for preparing secret data from various sources

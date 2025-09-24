@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -150,4 +151,22 @@ func TestASecretValueTypeJson(t *testing.T) {
 
 	assert.Equal(t, "json", secret.Spec.ValueType)
 	assert.Equal(t, `{"key":"value","another":"item"}`, secret.Spec.Data["json"].Value)
+}
+
+func TestASecretWithRefreshInterval(t *testing.T) {
+	tenMin := metav1.Duration{Duration: 10 * time.Minute}
+	secret := &ASecret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-refresh-secret",
+			Namespace: "default",
+		},
+		Spec: ASecretSpec{
+			TargetSecretName: "refresh-secret",
+			AwsSecretPath:    "dev/myapp/refresh",
+			RefreshInterval:  &tenMin,
+		},
+	}
+
+	assert.NotNil(t, secret.Spec.RefreshInterval)
+	assert.Equal(t, 10*time.Minute, secret.Spec.RefreshInterval.Duration)
 }

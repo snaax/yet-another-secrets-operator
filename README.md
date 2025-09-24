@@ -135,6 +135,27 @@ spec:
         name: password-generator
 ```
 
+### Set Refresh Interval Per Secret
+
+You can specify how often the operator should reconcile a given secret by using the `refreshInterval` field (optional):
+
+```yaml
+apiVersion: yet-another-secrets.io/v1alpha1
+kind: ASecret
+metadata:
+  name: app-secrets
+  namespace: default
+spec:
+  targetSecretName: my-app-secret
+  awsSecretPath: /my-app/secrets
+  refreshInterval: 15m
+  data:
+    username:
+      value: admin
+```
+
+If not set, the default interval is 1 hour.
+
 ## Configuration Options
 
 The following table lists the configurable parameters of the Yet Another Secrets Operator chart:

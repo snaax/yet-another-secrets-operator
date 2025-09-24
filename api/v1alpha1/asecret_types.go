@@ -35,6 +35,12 @@ type ASecretSpec struct {
 	// +kubebuilder:validation:Enum=kv;json
 	// +optional
 	ValueType string `json:"valueType,omitempty"`
+
+	// RefreshInterval specifies how long the operator waits between each refresh/reconcile of this secret.
+	// Default is "1h"
+	// Example: "10m", "1h"
+	// +optional
+	RefreshInterval *metav1.Duration `json:"refreshInterval,omitempty"`
 }
 
 // DataSource defines the source of the secret data

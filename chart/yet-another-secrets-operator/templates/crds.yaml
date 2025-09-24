@@ -216,6 +216,12 @@ spec:
                 description: OnlyImportRemote imports all values from remote provider
                   only, do not create if missing
                 type: boolean
+              refreshInterval:
+                description: |-
+                  RefreshInterval specifies how long the operator waits between each refresh/reconcile of this secret.
+                  Default is "1h"
+                  Example: "10m", "1h"
+                type: string
               tags:
                 additionalProperties:
                   type: string

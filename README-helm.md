@@ -73,6 +73,7 @@ metadata:
 spec:
   targetSecretName: my-app-secret
   awsSecretPath: /my-app/secrets
+  refreshInterval: 10m
   data:
     username:
       value: admin
