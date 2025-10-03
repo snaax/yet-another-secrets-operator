@@ -57,6 +57,42 @@ Each key in the `data` field supports the following options:
 - `generatorRef`: Reference to an AGenerator for password generation
 - `onlyImportRemote`: Boolean flag to only import existing values from AWS without creating new ones
 
+## Secret Template
+
+You can customize the metadata of the generated Kubernetes Secret using the `secretTemplate` field:
+
+```yaml
+apiVersion: yet-another-secrets.io/v1alpha1
+kind: ASecret
+metadata:
+  name: app-secrets
+  namespace: default
+spec:
+  targetSecretName: my-app-secret
+  targetSecretTemplate:
+    labels:
+      app: my-application
+      environment: production
+      managed-by: yet-another-secrets-operator
+    annotations:
+      description: "Application secrets for my-app"
+      owner: "platform-team"
+    type: Opaque
+  awsSecretPath: /my-app/secrets
+  data:
+    username:
+      value: admin
+    password:
+      generatorRef:
+        name: password-generator
+```
+
+### Secret Template Options
+
+- `labels`: Custom labels to apply to the Kubernetes Secret
+- `annotations`: Custom annotations to apply to the Kubernetes Secret
+- `type`: Kubernetes Secret type (e.g., `Opaque`, `kubernetes.io/tls`, `kubernetes.io/dockerconfigjson`)
+
 ## How it works
 
 1. The operator checks if the secret exists in AWS Secrets Manager.

@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -8,6 +9,10 @@ import (
 type ASecretSpec struct {
 	// TargetSecretName is the name of the Kubernetes Secret to be created/managed
 	TargetSecretName string `json:"targetSecretName"`
+
+	// SecretTemplate defines metadata to be applied to the Kubernetes Secret
+	// +optional
+	TargetSecretTemplate *TargetSecretTemplate `json:"secretTemplate,omitempty"`
 
 	// AwsSecretPath is the path in AWS SecretsManager where the secret is stored
 	AwsSecretPath string `json:"awsSecretPath"`
@@ -41,6 +46,21 @@ type ASecretSpec struct {
 	// Example: "10m", "1h"
 	// +optional
 	RefreshInterval *metav1.Duration `json:"refreshInterval,omitempty"`
+}
+
+// TargetSecretTemplate defines the template for the Kubernetes Secret metadata
+type TargetSecretTemplate struct {
+	// Labels to be applied to the Kubernetes Secret
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+
+	// Annotations to be applied to the Kubernetes Secret
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	// Type of the Kubernetes Secret. Defaults to Opaque if not specified
+	// +optional
+	Type *corev1.SecretType `json:"type,omitempty"`
 }
 
 // DataSource defines the source of the secret data

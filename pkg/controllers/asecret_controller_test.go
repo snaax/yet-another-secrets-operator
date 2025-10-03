@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	secretsv1alpha1 "github.com/yaso/yet-another-secrets-operator/api/v1alpha1"
 	awsclient "github.com/yaso/yet-another-secrets-operator/pkg/providers/aws/client"
@@ -72,6 +73,228 @@ func (m *MockSecretsManagerClient) TagResource(ctx context.Context, params *secr
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*secretsmanager.TagResourceOutput), args.Error(1)
+}
+
+func TestApplyTargetSecretTemplate(t *testing.T) {
+	tests := []struct {
+		name                string
+		aSecret             *secretsv1alpha1.ASecret
+		secret              *corev1.Secret
+		expectedLabels      map[string]string
+		expectedAnnotations map[string]string
+		expectedType        corev1.SecretType
+	}{
+		{
+			name: "applies all template fields",
+			aSecret: &secretsv1alpha1.ASecret{
+				Spec: secretsv1alpha1.ASecretSpec{
+					TargetSecretTemplate: &secretsv1alpha1.TargetSecretTemplate{
+						Labels: map[string]string{
+							"app":         "myapp",
+							"environment": "production",
+						},
+						Annotations: map[string]string{
+							"description": "Application secrets",
+							"owner":       "platform-team",
+						},
+						Type: &[]corev1.SecretType{corev1.SecretTypeTLS}[0],
+					},
+				},
+			},
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret",
+					Namespace: "default",
+				},
+			},
+			expectedLabels: map[string]string{
+				"app":         "myapp",
+				"environment": "production",
+			},
+			expectedAnnotations: map[string]string{
+				"description": "Application secrets",
+				"owner":       "platform-team",
+			},
+			expectedType: corev1.SecretTypeTLS,
+		},
+		{
+			name: "merges with existing labels and annotations",
+			aSecret: &secretsv1alpha1.ASecret{
+				Spec: secretsv1alpha1.ASecretSpec{
+					TargetSecretTemplate: &secretsv1alpha1.TargetSecretTemplate{
+						Labels: map[string]string{
+							"app":     "myapp",
+							"version": "v2.0",
+						},
+						Annotations: map[string]string{
+							"description": "Updated description",
+							"team":        "backend",
+						},
+					},
+				},
+			},
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret",
+					Namespace: "default",
+					Labels: map[string]string{
+						"app":         "old-app",
+						"environment": "staging",
+					},
+					Annotations: map[string]string{
+						"owner":       "old-owner",
+						"description": "old description",
+					},
+				},
+			},
+			expectedLabels: map[string]string{
+				"app":         "myapp",   // overridden
+				"environment": "staging", // preserved
+				"version":     "v2.0",    // added
+			},
+			expectedAnnotations: map[string]string{
+				"owner":       "old-owner",           // preserved
+				"description": "Updated description", // overridden
+				"team":        "backend",             // added
+			},
+			expectedType: corev1.SecretTypeOpaque, // default type
+		},
+		{
+			name: "handles nil template",
+			aSecret: &secretsv1alpha1.ASecret{
+				Spec: secretsv1alpha1.ASecretSpec{
+					TargetSecretTemplate: nil,
+				},
+			},
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret",
+					Namespace: "default",
+					Labels: map[string]string{
+						"existing": "label",
+					},
+				},
+				Type: corev1.SecretTypeDockerConfigJson,
+			},
+			expectedLabels: map[string]string{
+				"existing": "label",
+			},
+			expectedAnnotations: nil,
+			expectedType:        corev1.SecretTypeDockerConfigJson,
+		},
+		{
+			name: "applies only labels",
+			aSecret: &secretsv1alpha1.ASecret{
+				Spec: secretsv1alpha1.ASecretSpec{
+					TargetSecretTemplate: &secretsv1alpha1.TargetSecretTemplate{
+						Labels: map[string]string{
+							"app": "myapp",
+						},
+					},
+				},
+			},
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret",
+					Namespace: "default",
+				},
+				Type: corev1.SecretTypeOpaque,
+			},
+			expectedLabels: map[string]string{
+				"app": "myapp",
+			},
+			expectedAnnotations: nil,
+			expectedType:        corev1.SecretTypeOpaque,
+		},
+		{
+			name: "applies only annotations",
+			aSecret: &secretsv1alpha1.ASecret{
+				Spec: secretsv1alpha1.ASecretSpec{
+					TargetSecretTemplate: &secretsv1alpha1.TargetSecretTemplate{
+						Annotations: map[string]string{
+							"description": "Test secret",
+						},
+					},
+				},
+			},
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret",
+					Namespace: "default",
+				},
+				Type: corev1.SecretTypeOpaque,
+			},
+			expectedLabels: nil,
+			expectedAnnotations: map[string]string{
+				"description": "Test secret",
+			},
+			expectedType: corev1.SecretTypeOpaque,
+		},
+		{
+			name: "applies only type",
+			aSecret: &secretsv1alpha1.ASecret{
+				Spec: secretsv1alpha1.ASecretSpec{
+					TargetSecretTemplate: &secretsv1alpha1.TargetSecretTemplate{
+						Type: &[]corev1.SecretType{corev1.SecretTypeServiceAccountToken}[0],
+					},
+				},
+			},
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret",
+					Namespace: "default",
+					Labels: map[string]string{
+						"existing": "label",
+					},
+				},
+				Type: corev1.SecretTypeOpaque,
+			},
+			expectedLabels: map[string]string{
+				"existing": "label",
+			},
+			expectedAnnotations: nil,
+			expectedType:        corev1.SecretTypeServiceAccountToken,
+		},
+		{
+			name: "creates maps when they don't exist",
+			aSecret: &secretsv1alpha1.ASecret{
+				Spec: secretsv1alpha1.ASecretSpec{
+					TargetSecretTemplate: &secretsv1alpha1.TargetSecretTemplate{
+						Labels: map[string]string{
+							"new": "label",
+						},
+						Annotations: map[string]string{
+							"new": "annotation",
+						},
+					},
+				},
+			},
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret",
+					Namespace: "default",
+				},
+			},
+			expectedLabels: map[string]string{
+				"new": "label",
+			},
+			expectedAnnotations: map[string]string{
+				"new": "annotation",
+			},
+			expectedType: corev1.SecretTypeOpaque, // default
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &ASecretReconciler{}
+			r.applyTargetSecretTemplate(tt.aSecret, tt.secret)
+
+			assert.Equal(t, tt.expectedLabels, tt.secret.Labels)
+			assert.Equal(t, tt.expectedAnnotations, tt.secret.Annotations)
+			assert.Equal(t, tt.expectedType, tt.secret.Type)
+		})
+	}
 }
 
 func TestPrepareOnlyImportRemoteData(t *testing.T) {
@@ -1514,6 +1737,191 @@ func TestParseAwsSecretValueErrorPaths(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Tests for the new TargetSecretTemplate functionality
+func TestApplyTargetSecretTemplateWithTLSSecret(t *testing.T) {
+	tlsType := corev1.SecretTypeTLS
+	aSecret := &secretsv1alpha1.ASecret{
+		Spec: secretsv1alpha1.ASecretSpec{
+			TargetSecretTemplate: &secretsv1alpha1.TargetSecretTemplate{
+				Labels: map[string]string{
+					"app.kubernetes.io/name":      "my-app",
+					"app.kubernetes.io/instance":  "my-app-prod",
+					"app.kubernetes.io/component": "tls",
+				},
+				Annotations: map[string]string{
+					"cert-manager.io/issuer":                   "letsencrypt-prod",
+					"cert-manager.io/common-name":              "my-app.example.com",
+					"nginx.ingress.kubernetes.io/ssl-redirect": "true",
+				},
+				Type: &tlsType,
+			},
+		},
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-app-tls",
+			Namespace: "production",
+		},
+		Type: corev1.SecretTypeOpaque,
+	}
+
+	r := &ASecretReconciler{}
+	r.applyTargetSecretTemplate(aSecret, secret)
+
+	// Verify labels
+	assert.Len(t, secret.Labels, 3)
+	assert.Equal(t, "my-app", secret.Labels["app.kubernetes.io/name"])
+	assert.Equal(t, "my-app-prod", secret.Labels["app.kubernetes.io/instance"])
+	assert.Equal(t, "tls", secret.Labels["app.kubernetes.io/component"])
+
+	// Verify annotations
+	assert.Len(t, secret.Annotations, 3)
+	assert.Equal(t, "letsencrypt-prod", secret.Annotations["cert-manager.io/issuer"])
+	assert.Equal(t, "my-app.example.com", secret.Annotations["cert-manager.io/common-name"])
+	assert.Equal(t, "true", secret.Annotations["nginx.ingress.kubernetes.io/ssl-redirect"])
+
+	// Verify type was changed
+	assert.Equal(t, corev1.SecretTypeTLS, secret.Type)
+}
+
+func TestApplyTargetSecretTemplateWithDockerConfigSecret(t *testing.T) {
+	dockerConfigType := corev1.SecretTypeDockerConfigJson
+	aSecret := &secretsv1alpha1.ASecret{
+		Spec: secretsv1alpha1.ASecretSpec{
+			TargetSecretTemplate: &secretsv1alpha1.TargetSecretTemplate{
+				Labels: map[string]string{
+					"app.kubernetes.io/name":       "registry-creds",
+					"app.kubernetes.io/managed-by": "yet-another-secrets-operator",
+				},
+				Annotations: map[string]string{
+					"description": "Docker registry credentials",
+					"registry":    "docker.io",
+				},
+				Type: &dockerConfigType,
+			},
+		},
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "docker-registry-creds",
+			Namespace: "default",
+			Labels: map[string]string{
+				"existing": "label",
+			},
+			Annotations: map[string]string{
+				"existing": "annotation",
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+	}
+
+	r := &ASecretReconciler{}
+	r.applyTargetSecretTemplate(aSecret, secret)
+
+	// Verify labels were merged
+	assert.Len(t, secret.Labels, 3)
+	assert.Equal(t, "label", secret.Labels["existing"])
+	assert.Equal(t, "registry-creds", secret.Labels["app.kubernetes.io/name"])
+	assert.Equal(t, "yet-another-secrets-operator", secret.Labels["app.kubernetes.io/managed-by"])
+
+	// Verify annotations were merged
+	assert.Len(t, secret.Annotations, 3)
+	assert.Equal(t, "annotation", secret.Annotations["existing"])
+	assert.Equal(t, "Docker registry credentials", secret.Annotations["description"])
+	assert.Equal(t, "docker.io", secret.Annotations["registry"])
+
+	// Verify type was changed
+	assert.Equal(t, corev1.SecretTypeDockerConfigJson, secret.Type)
+}
+
+func TestApplyTargetSecretTemplateOverridesExistingMetadata(t *testing.T) {
+	serviceAccountType := corev1.SecretTypeServiceAccountToken
+	aSecret := &secretsv1alpha1.ASecret{
+		Spec: secretsv1alpha1.ASecretSpec{
+			TargetSecretTemplate: &secretsv1alpha1.TargetSecretTemplate{
+				Labels: map[string]string{
+					"app":         "new-app",
+					"environment": "production",
+				},
+				Annotations: map[string]string{
+					"description": "Updated description",
+					"team":        "platform",
+				},
+				Type: &serviceAccountType,
+			},
+		},
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "service-account-token",
+			Namespace: "kube-system",
+			Labels: map[string]string{
+				"app":     "old-app",
+				"version": "v1.0",
+			},
+			Annotations: map[string]string{
+				"description": "Old description",
+				"owner":       "admin",
+			},
+		},
+		Type: corev1.SecretTypeTLS,
+	}
+
+	r := &ASecretReconciler{}
+	r.applyTargetSecretTemplate(aSecret, secret)
+
+	// Verify labels: template values override existing, others are preserved
+	assert.Len(t, secret.Labels, 3)
+	assert.Equal(t, "new-app", secret.Labels["app"])            // overridden
+	assert.Equal(t, "v1.0", secret.Labels["version"])           // preserved
+	assert.Equal(t, "production", secret.Labels["environment"]) // added
+
+	// Verify annotations: template values override existing, others are preserved
+	assert.Len(t, secret.Annotations, 3)
+	assert.Equal(t, "Updated description", secret.Annotations["description"]) // overridden
+	assert.Equal(t, "admin", secret.Annotations["owner"])                     // preserved
+	assert.Equal(t, "platform", secret.Annotations["team"])                   // added
+
+	// Verify type was changed
+	assert.Equal(t, corev1.SecretTypeServiceAccountToken, secret.Type)
+}
+
+func TestApplyTargetSecretTemplateEmptyTemplate(t *testing.T) {
+	aSecret := &secretsv1alpha1.ASecret{
+		Spec: secretsv1alpha1.ASecretSpec{
+			TargetSecretTemplate: &secretsv1alpha1.TargetSecretTemplate{},
+		},
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-secret",
+			Namespace: "default",
+			Labels: map[string]string{
+				"existing": "label",
+			},
+			Annotations: map[string]string{
+				"existing": "annotation",
+			},
+		},
+	}
+
+	r := &ASecretReconciler{}
+	r.applyTargetSecretTemplate(aSecret, secret)
+
+	// Verify nothing changed
+	assert.Len(t, secret.Labels, 1)
+	assert.Equal(t, "label", secret.Labels["existing"])
+
+	assert.Len(t, secret.Annotations, 1)
+	assert.Equal(t, "annotation", secret.Annotations["existing"])
+
+	assert.Equal(t, corev1.SecretTypeOpaque, secret.Type)
 }
 
 // Helper function

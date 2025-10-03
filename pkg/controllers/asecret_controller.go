@@ -110,6 +110,9 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		existingSecret.Data = secretData
 		existingSecret.Type = corev1.SecretTypeOpaque
 
+		// Apply target secret template if specified
+		r.applyTargetSecretTemplate(&aSecret, existingSecret)
+
 		if err := controllerutil.SetControllerReference(&aSecret, existingSecret, r.Scheme); err != nil {
 			log.Error(err, "Failed to set controller reference on Secret")
 			return ctrl.Result{}, err
@@ -122,6 +125,10 @@ func (r *ASecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		log.Info("Created Kubernetes Secret", "name", existingSecret.Name)
 	} else {
 		existingSecret.Data = secretData
+
+		// Apply target secret template if specified
+		r.applyTargetSecretTemplate(&aSecret, existingSecret)
+
 		if err := r.Update(ctx, existingSecret); err != nil {
 			log.Error(err, "Failed to update Secret")
 			return ctrl.Result{}, err
@@ -178,6 +185,42 @@ func (r *ASecretReconciler) prepareSecretData(aSecret *secretsv1alpha1.ASecret, 
 	}
 
 	return r.prepareNormalMergeData(aSecret, existingSecret, awsSecretData, awsSecretExists, kubeSecretExists)
+}
+
+// applyTargetSecretTemplate applies the secret template configuration to the Kubernetes Secret
+func (r *ASecretReconciler) applyTargetSecretTemplate(aSecret *secretsv1alpha1.ASecret, secret *corev1.Secret) {
+	if aSecret.Spec.TargetSecretTemplate == nil {
+		return
+	}
+
+	template := aSecret.Spec.TargetSecretTemplate
+
+	// Apply labels
+	if template.Labels != nil {
+		if secret.Labels == nil {
+			secret.Labels = make(map[string]string)
+		}
+		for k, v := range template.Labels {
+			secret.Labels[k] = v
+		}
+	}
+
+	// Apply annotations
+	if template.Annotations != nil {
+		if secret.Annotations == nil {
+			secret.Annotations = make(map[string]string)
+		}
+		for k, v := range template.Annotations {
+			secret.Annotations[k] = v
+		}
+	}
+
+	// Apply secret type
+	if template.Type != nil {
+		secret.Type = *template.Type
+	} else {
+		secret.Type = corev1.SecretTypeOpaque
+	}
 }
 
 // prepareOnlyImportRemoteData prepares data when onlyImportRemote is true
