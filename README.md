@@ -59,7 +59,7 @@ Each key in the `data` field supports the following options:
 
 ## Secret Template
 
-You can customize the metadata of the generated Kubernetes Secret using the `secretTemplate` field:
+You can customize the metadata of the generated Kubernetes Secret using the `targetSecretTemplate` field:
 
 ```yaml
 apiVersion: yet-another-secrets.io/v1alpha1

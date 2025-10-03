@@ -10,9 +10,9 @@ type ASecretSpec struct {
 	// TargetSecretName is the name of the Kubernetes Secret to be created/managed
 	TargetSecretName string `json:"targetSecretName"`
 
-	// SecretTemplate defines metadata to be applied to the Kubernetes Secret
+	// TargetSecretTemplate defines metadata to be applied to the Kubernetes Secret
 	// +optional
-	TargetSecretTemplate *TargetSecretTemplate `json:"secretTemplate,omitempty"`
+	TargetSecretTemplate *TargetSecretTemplate `json:"targetSecretTemplate,omitempty"`
 
 	// AwsSecretPath is the path in AWS SecretsManager where the secret is stored
 	AwsSecretPath string `json:"awsSecretPath"`
