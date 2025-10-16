@@ -355,6 +355,37 @@ func (r *ASecretReconciler) getAwsSecret(ctx context.Context, smClient awsclient
 		return r.handleAwsSecretError(err, secretID, log)
 	}
 
+	// Handle binary secrets
+	if secret.Spec.ValueType == "binary" {
+		if result.SecretBinary == nil {
+			log.Error(nil, "AWS secret binary value is nil", "secretPath", secretID)
+			return nil, true, fmt.Errorf("secret binary value is nil for %s", secretID)
+		}
+		// For binary secrets, store as a single key-value pair
+		// The key name comes from the first (and only) key in the Data spec
+		secretData := make(map[string]string)
+
+		// Get the single key name from spec
+		keyName := ""
+		for k := range secret.Spec.Data {
+			if keyName != "" {
+				log.Error(nil, "Binary secrets can only have one key", "secretPath", secretID)
+				return nil, true, fmt.Errorf("binary secret %s has multiple keys, only one is allowed", secretID)
+			}
+			keyName = k
+		}
+
+		// Default to "binaryData" if no key specified
+		if keyName == "" {
+			keyName = "binaryData"
+		}
+
+		secretData[keyName] = string(result.SecretBinary)
+		log.V(1).Info("Successfully retrieved AWS binary secret", "path", secretID, "key", keyName, "size", len(result.SecretBinary))
+		return secretData, true, nil
+	}
+
+	// Handle string secrets (kv and json)
 	if result.SecretString == nil {
 		log.Error(nil, "AWS secret value is nil", "secretPath", secretID)
 		return nil, true, fmt.Errorf("secret value is nil for %s", secretID)
@@ -423,19 +454,43 @@ func (r *ASecretReconciler) parseAwsSecretValue(secretValue, valueType string) (
 
 // createOrUpdateAwsSecret creates or updates a secret in AWS SecretsManager
 func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClient awsclient.SecretsManagerAPI, aSecret *secretsv1alpha1.ASecret, data map[string][]byte, log logr.Logger) error {
-	secretString, err := r.prepareAwsSecretString(data, aSecret.Spec.ValueType)
-	if err != nil {
-		return err
-	}
-
 	secretPath := aSecret.Spec.AwsSecretPath
 
 	// Check if secret exists
-	_, err = smClient.DescribeSecret(ctx, &secretsmanager.DescribeSecretInput{
+	_, err := smClient.DescribeSecret(ctx, &secretsmanager.DescribeSecretInput{
 		SecretId: aws.String(secretPath),
 	})
 
 	tags := r.prepareTags(aSecret)
+
+	// Handle binary secrets differently
+	if aSecret.Spec.ValueType == "binary" {
+		// For binary type, get the single key's value
+		var secretBinary []byte
+		keyCount := 0
+		for _, v := range data {
+			if keyCount > 0 {
+				return fmt.Errorf("binary secret can only have one key")
+			}
+			secretBinary = v
+			keyCount++
+		}
+
+		if len(secretBinary) == 0 {
+			return fmt.Errorf("binary secret has no data")
+		}
+
+		if err != nil {
+			return r.createAwsSecretBinary(ctx, smClient, aSecret, secretBinary, tags, log)
+		}
+		return r.updateAwsSecretBinary(ctx, smClient, aSecret, secretBinary, tags)
+	}
+
+	// Handle string secrets (kv and json)
+	secretString, stringErr := r.prepareAwsSecretString(data, aSecret.Spec.ValueType)
+	if stringErr != nil {
+		return stringErr
+	}
 
 	if err != nil {
 		return r.createAwsSecret(ctx, smClient, aSecret, secretString, tags, log)
@@ -523,6 +578,48 @@ func (r *ASecretReconciler) updateAwsSecret(ctx context.Context, smClient awscli
 	_, err := smClient.PutSecretValue(ctx, &secretsmanager.PutSecretValueInput{
 		SecretId:     aws.String(secretPath),
 		SecretString: aws.String(secretString),
+	})
+
+	// Update tags if no error and tags exist
+	if err == nil && len(tags) > 0 {
+		_, err = smClient.TagResource(ctx, &secretsmanager.TagResourceInput{
+			SecretId: aws.String(secretPath),
+			Tags:     tags,
+		})
+	}
+
+	return err
+}
+
+// createAwsSecretBinary creates a new AWS secret with binary data
+func (r *ASecretReconciler) createAwsSecretBinary(ctx context.Context, smClient awsclient.SecretsManagerAPI, aSecret *secretsv1alpha1.ASecret, secretBinary []byte, tags []smTypes.Tag, log logr.Logger) error {
+	secretPath := aSecret.Spec.AwsSecretPath
+	createInput := &secretsmanager.CreateSecretInput{
+		Name:         aws.String(secretPath),
+		SecretBinary: secretBinary,
+		Tags:         tags,
+	}
+
+	// Determine KMS key
+	kmsKeyId := r.determineKmsKey(aSecret, log, secretPath)
+	if kmsKeyId != "" {
+		createInput.KmsKeyId = aws.String(kmsKeyId)
+	} else {
+		log.V(1).Info("Creating AWS binary secret with default encryption", "path", secretPath)
+	}
+
+	_, err := smClient.CreateSecret(ctx, createInput)
+	return err
+}
+
+// updateAwsSecretBinary updates an existing AWS secret with binary data
+func (r *ASecretReconciler) updateAwsSecretBinary(ctx context.Context, smClient awsclient.SecretsManagerAPI, aSecret *secretsv1alpha1.ASecret, secretBinary []byte, tags []smTypes.Tag) error {
+	secretPath := aSecret.Spec.AwsSecretPath
+
+	// Update secret value
+	_, err := smClient.PutSecretValue(ctx, &secretsmanager.PutSecretValueInput{
+		SecretId:     aws.String(secretPath),
+		SecretBinary: secretBinary,
 	})
 
 	// Update tags if no error and tags exist

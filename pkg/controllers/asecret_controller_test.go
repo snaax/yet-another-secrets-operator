@@ -1924,6 +1924,257 @@ func TestApplyTargetSecretTemplateEmptyTemplate(t *testing.T) {
 	assert.Equal(t, corev1.SecretTypeOpaque, secret.Type)
 }
 
+func TestGetAwsSecretBinary(t *testing.T) {
+	tests := []struct {
+		name           string
+		secret         *secretsv1alpha1.ASecret
+		mockResponse   *secretsmanager.GetSecretValueOutput
+		mockError      error
+		expectedData   map[string]string
+		expectedExists bool
+		expectedError  bool
+	}{
+		{
+			name: "successful retrieval of binary secret with key specified",
+			secret: &secretsv1alpha1.ASecret{
+				Spec: secretsv1alpha1.ASecretSpec{
+					AwsSecretPath: "/test/cert",
+					ValueType:     "binary",
+					Data: map[string]secretsv1alpha1.DataSource{
+						"tls.crt": {
+							OnlyImportRemote: boolPtr(true),
+						},
+					},
+				},
+			},
+			mockResponse: &secretsmanager.GetSecretValueOutput{
+				SecretBinary: []byte("certificate-data-here"),
+			},
+			mockError: nil,
+			expectedData: map[string]string{
+				"tls.crt": "certificate-data-here",
+			},
+			expectedExists: true,
+			expectedError:  false,
+		},
+		{
+			name: "successful retrieval of binary secret without key specified (uses default)",
+			secret: &secretsv1alpha1.ASecret{
+				Spec: secretsv1alpha1.ASecretSpec{
+					AwsSecretPath: "/test/cert",
+					ValueType:     "binary",
+					Data:          map[string]secretsv1alpha1.DataSource{},
+				},
+			},
+			mockResponse: &secretsmanager.GetSecretValueOutput{
+				SecretBinary: []byte("certificate-data-here"),
+			},
+			mockError: nil,
+			expectedData: map[string]string{
+				"binaryData": "certificate-data-here",
+			},
+			expectedExists: true,
+			expectedError:  false,
+		},
+		{
+			name: "binary secret with multiple keys returns error",
+			secret: &secretsv1alpha1.ASecret{
+				Spec: secretsv1alpha1.ASecretSpec{
+					AwsSecretPath: "/test/cert",
+					ValueType:     "binary",
+					Data: map[string]secretsv1alpha1.DataSource{
+						"tls.crt": {OnlyImportRemote: boolPtr(true)},
+						"tls.key": {OnlyImportRemote: boolPtr(true)},
+					},
+				},
+			},
+			mockResponse: &secretsmanager.GetSecretValueOutput{
+				SecretBinary: []byte("certificate-data-here"),
+			},
+			mockError:      nil,
+			expectedData:   nil,
+			expectedExists: true,
+			expectedError:  true,
+		},
+		{
+			name: "binary secret with nil SecretBinary",
+			secret: &secretsv1alpha1.ASecret{
+				Spec: secretsv1alpha1.ASecretSpec{
+					AwsSecretPath: "/test/cert",
+					ValueType:     "binary",
+				},
+			},
+			mockResponse: &secretsmanager.GetSecretValueOutput{
+				SecretBinary: nil,
+			},
+			mockError:      nil,
+			expectedData:   nil,
+			expectedExists: true,
+			expectedError:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := &MockSecretsManagerClient{}
+			mockClient.On("GetSecretValue", mock.Anything, mock.MatchedBy(func(input *secretsmanager.GetSecretValueInput) bool {
+				return *input.SecretId == tt.secret.Spec.AwsSecretPath
+			})).Return(tt.mockResponse, tt.mockError)
+
+			r := &ASecretReconciler{}
+			ctx := context.Background()
+			log := logr.Discard()
+
+			data, exists, err := r.getAwsSecret(ctx, mockClient, tt.secret, log)
+
+			assert.Equal(t, tt.expectedData, data)
+			assert.Equal(t, tt.expectedExists, exists)
+
+			if tt.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCreateOrUpdateAwsSecretBinary(t *testing.T) {
+	tests := []struct {
+		name          string
+		aSecret       *secretsv1alpha1.ASecret
+		data          map[string][]byte
+		awsClient     *awsclient.AwsClient
+		describeError error
+		createError   error
+		updateError   error
+		expectedError bool
+		expectCreate  bool
+	}{
+		{
+			name: "create new binary secret",
+			aSecret: &secretsv1alpha1.ASecret{
+				Spec: secretsv1alpha1.ASecretSpec{
+					AwsSecretPath: "/test/cert",
+					ValueType:     "binary",
+				},
+			},
+			data: map[string][]byte{
+				"tls.crt": []byte("certificate-binary-data"),
+			},
+			awsClient: &awsclient.AwsClient{
+				Config: config.AWSConfig{},
+			},
+			describeError: &smTypes.ResourceNotFoundException{},
+			createError:   nil,
+			updateError:   nil,
+			expectedError: false,
+			expectCreate:  true,
+		},
+		{
+			name: "update existing binary secret",
+			aSecret: &secretsv1alpha1.ASecret{
+				Spec: secretsv1alpha1.ASecretSpec{
+					AwsSecretPath: "/test/cert",
+					ValueType:     "binary",
+				},
+			},
+			data: map[string][]byte{
+				"certificate": []byte("updated-certificate-data"),
+			},
+			awsClient: &awsclient.AwsClient{
+				Config: config.AWSConfig{},
+			},
+			describeError: nil,
+			createError:   nil,
+			updateError:   nil,
+			expectedError: false,
+			expectCreate:  false,
+		},
+		{
+			name: "binary secret with multiple keys returns error",
+			aSecret: &secretsv1alpha1.ASecret{
+				Spec: secretsv1alpha1.ASecretSpec{
+					AwsSecretPath: "/test/cert",
+					ValueType:     "binary",
+				},
+			},
+			data: map[string][]byte{
+				"tls.crt": []byte("cert-data"),
+				"tls.key": []byte("key-data"),
+			},
+			awsClient: &awsclient.AwsClient{
+				Config: config.AWSConfig{},
+			},
+			describeError: nil,
+			createError:   nil,
+			updateError:   nil,
+			expectedError: true,
+			expectCreate:  false,
+		},
+		{
+			name: "binary secret with no data returns error",
+			aSecret: &secretsv1alpha1.ASecret{
+				Spec: secretsv1alpha1.ASecretSpec{
+					AwsSecretPath: "/test/cert",
+					ValueType:     "binary",
+				},
+			},
+			data: map[string][]byte{},
+			awsClient: &awsclient.AwsClient{
+				Config: config.AWSConfig{},
+			},
+			describeError: nil,
+			createError:   nil,
+			updateError:   nil,
+			expectedError: true,
+			expectCreate:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := &MockSecretsManagerClient{}
+
+			// DescribeSecret is always called first
+			mockClient.On("DescribeSecret", mock.Anything, mock.MatchedBy(func(input *secretsmanager.DescribeSecretInput) bool {
+				return *input.SecretId == tt.aSecret.Spec.AwsSecretPath
+			})).Return(&secretsmanager.DescribeSecretOutput{}, tt.describeError)
+
+			// Only mock Create/Update if we have exactly 1 key (valid case)
+			if len(tt.data) == 1 {
+				if tt.expectCreate && tt.describeError != nil {
+					mockClient.On("CreateSecret", mock.Anything, mock.MatchedBy(func(input *secretsmanager.CreateSecretInput) bool {
+						return input.SecretBinary != nil
+					})).Return(&secretsmanager.CreateSecretOutput{}, tt.createError)
+				} else if !tt.expectCreate && tt.describeError == nil {
+					mockClient.On("PutSecretValue", mock.Anything, mock.MatchedBy(func(input *secretsmanager.PutSecretValueInput) bool {
+						return input.SecretBinary != nil
+					})).Return(&secretsmanager.PutSecretValueOutput{}, tt.updateError)
+				}
+			}
+
+			r := &ASecretReconciler{
+				AwsClient: tt.awsClient,
+			}
+			ctx := context.Background()
+			log := logr.Discard()
+
+			err := r.createOrUpdateAwsSecret(ctx, mockClient, tt.aSecret, tt.data, log)
+
+			if tt.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
 // Helper function
 func boolPtr(b bool) *bool {
 	return &b

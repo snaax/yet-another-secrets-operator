@@ -145,6 +145,62 @@ spec:
 When `valueType: json`, the operator will treat the secret as a single blob for both synchronize and import.
 ```
 
+## Storing Binary Data (Certificates, Keys, etc.)
+
+You can store binary data like certificates, private keys, or other binary files by setting `valueType: binary`. This uses AWS Secrets Manager's `SecretBinary` field instead of `SecretString`.
+
+**Important**: Binary secrets can only contain ONE key-value pair in Kubernetes.
+
+```yaml
+apiVersion: yet-another-secrets.io/v1alpha1
+kind: ASecret
+metadata:
+  name: tls-certificate
+  namespace: default
+spec:
+  targetSecretName: my-tls-cert
+  awsSecretPath: /certificates/tls/my-app
+  valueType: binary
+  targetSecretTemplate:
+    type: kubernetes.io/tls
+    labels:
+      app: my-application
+  data:
+    # Only ONE key allowed for binary secrets
+    tls.crt:
+      value: |
+        LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t...
+        (base64-encoded certificate data)
+```
+
+### Import Binary Secrets from AWS
+
+You can import existing binary secrets from AWS Secrets Manager:
+
+```yaml
+apiVersion: yet-another-secrets.io/v1alpha1
+kind: ASecret
+metadata:
+  name: imported-certificate
+  namespace: default
+spec:
+  targetSecretName: external-cert
+  awsSecretPath: /prod/certificates/external
+  valueType: binary
+  onlyImportRemote: true  # Only import, don't create if missing
+  data:
+    certificate:  # Key name in the Kubernetes secret
+      onlyImportRemote: true
+```
+
+When `valueType: binary`:
+- The operator uses AWS Secrets Manager's `SecretBinary` field
+- Data is automatically base64-encoded when storing in AWS
+- Data is automatically decoded when retrieving from AWS
+- Only ONE key is allowed in the `data` section
+- If no key is specified, defaults to `binaryData`
+- Perfect for certificates, keys, and other binary files
+
 ### Import-Only Mode
 
 You can configure the operator to only import existing secrets from AWS without creating new ones:

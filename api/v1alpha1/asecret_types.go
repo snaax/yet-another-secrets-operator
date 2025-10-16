@@ -36,8 +36,11 @@ type ASecretSpec struct {
 	OnlyImportRemote *bool `json:"onlyImportRemote,omitempty"`
 
 	// ValueType specifies how the secret should be stored in AWS SecretsManager.
-	// Allowed values: "kv" or "json". Default is "kv".
-	// +kubebuilder:validation:Enum=kv;json
+	// Allowed values: "kv", "json", or "binary". Default is "kv".
+	// - "kv": Key-value pairs stored as JSON in SecretString
+	// - "json": Plain JSON stored in SecretString
+	// - "binary": Binary data stored in SecretBinary (useful for certificates, keys, etc.)
+	// +kubebuilder:validation:Enum=kv;json;binary
 	// +optional
 	ValueType string `json:"valueType,omitempty"`
 
