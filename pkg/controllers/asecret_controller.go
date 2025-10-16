@@ -455,12 +455,6 @@ func (r *ASecretReconciler) parseAwsSecretValue(secretValue, valueType string) (
 // createOrUpdateAwsSecret creates or updates a secret in AWS SecretsManager
 func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClient awsclient.SecretsManagerAPI, aSecret *secretsv1alpha1.ASecret, data map[string][]byte, log logr.Logger) error {
 	secretPath := aSecret.Spec.AwsSecretPath
-
-	// Check if secret exists
-	_, err := smClient.DescribeSecret(ctx, &secretsmanager.DescribeSecretInput{
-		SecretId: aws.String(secretPath),
-	})
-
 	tags := r.prepareTags(aSecret)
 
 	// Handle binary secrets differently
@@ -476,15 +470,28 @@ func (r *ASecretReconciler) createOrUpdateAwsSecret(ctx context.Context, smClien
 			keyCount++
 		}
 
+		// If there's no data, this is likely an import-only scenario
+		// Don't fail, just skip AWS update
 		if len(secretBinary) == 0 {
-			return fmt.Errorf("binary secret has no data")
+			log.V(1).Info("Binary secret has no data to push to AWS (likely import-only)", "path", secretPath)
+			return nil
 		}
+
+		// Check if secret exists
+		_, err := smClient.DescribeSecret(ctx, &secretsmanager.DescribeSecretInput{
+			SecretId: aws.String(secretPath),
+		})
 
 		if err != nil {
 			return r.createAwsSecretBinary(ctx, smClient, aSecret, secretBinary, tags, log)
 		}
 		return r.updateAwsSecretBinary(ctx, smClient, aSecret, secretBinary, tags)
 	}
+
+	// Check if secret exists (for non-binary secrets)
+	_, err := smClient.DescribeSecret(ctx, &secretsmanager.DescribeSecretInput{
+		SecretId: aws.String(secretPath),
+	})
 
 	// Handle string secrets (kv and json)
 	secretString, stringErr := r.prepareAwsSecretString(data, aSecret.Spec.ValueType)

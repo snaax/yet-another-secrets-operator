@@ -2115,7 +2115,7 @@ func TestCreateOrUpdateAwsSecretBinary(t *testing.T) {
 			expectCreate:  false,
 		},
 		{
-			name: "binary secret with no data returns error",
+			name: "binary secret with no data succeeds (import-only case)",
 			aSecret: &secretsv1alpha1.ASecret{
 				Spec: secretsv1alpha1.ASecretSpec{
 					AwsSecretPath: "/test/cert",
@@ -2129,7 +2129,7 @@ func TestCreateOrUpdateAwsSecretBinary(t *testing.T) {
 			describeError: nil,
 			createError:   nil,
 			updateError:   nil,
-			expectedError: true,
+			expectedError: false,
 			expectCreate:  false,
 		},
 	}
@@ -2138,13 +2138,14 @@ func TestCreateOrUpdateAwsSecretBinary(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockClient := &MockSecretsManagerClient{}
 
-			// DescribeSecret is always called first
-			mockClient.On("DescribeSecret", mock.Anything, mock.MatchedBy(func(input *secretsmanager.DescribeSecretInput) bool {
-				return *input.SecretId == tt.aSecret.Spec.AwsSecretPath
-			})).Return(&secretsmanager.DescribeSecretOutput{}, tt.describeError)
-
-			// Only mock Create/Update if we have exactly 1 key (valid case)
+			// Only mock AWS calls for valid cases (1 key or empty data)
+			// For multiple keys, the error happens before any AWS calls
 			if len(tt.data) == 1 {
+				// DescribeSecret is called for valid binary secrets with data
+				mockClient.On("DescribeSecret", mock.Anything, mock.MatchedBy(func(input *secretsmanager.DescribeSecretInput) bool {
+					return *input.SecretId == tt.aSecret.Spec.AwsSecretPath
+				})).Return(&secretsmanager.DescribeSecretOutput{}, tt.describeError)
+
 				if tt.expectCreate && tt.describeError != nil {
 					mockClient.On("CreateSecret", mock.Anything, mock.MatchedBy(func(input *secretsmanager.CreateSecretInput) bool {
 						return input.SecretBinary != nil
@@ -2155,6 +2156,8 @@ func TestCreateOrUpdateAwsSecretBinary(t *testing.T) {
 					})).Return(&secretsmanager.PutSecretValueOutput{}, tt.updateError)
 				}
 			}
+			// For empty data (import-only), no AWS calls are made
+			// For multiple keys, error is returned before AWS calls
 
 			r := &ASecretReconciler{
 				AwsClient: tt.awsClient,
