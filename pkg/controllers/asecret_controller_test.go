@@ -1131,6 +1131,40 @@ func TestProcessASecretData(t *testing.T) {
 			expected:    map[string][]byte{},
 			expectError: false,
 		},
+		{
+			name: "binary secret with base64 value gets decoded",
+			aSecret: &secretsv1alpha1.ASecret{
+				Spec: secretsv1alpha1.ASecretSpec{
+					ValueType: "binary",
+					Data: map[string]secretsv1alpha1.DataSource{
+						"cert.p12": {
+							Value: "SGVsbG8gV29ybGQh", // "Hello World!" in base64
+						},
+					},
+				},
+			},
+			secretData: map[string][]byte{},
+			expected: map[string][]byte{
+				"cert.p12": []byte("Hello World!"),
+			},
+			expectError: false,
+		},
+		{
+			name: "binary secret with invalid base64 returns error",
+			aSecret: &secretsv1alpha1.ASecret{
+				Spec: secretsv1alpha1.ASecretSpec{
+					ValueType: "binary",
+					Data: map[string]secretsv1alpha1.DataSource{
+						"cert.p12": {
+							Value: "not-valid-base64!!!", // Invalid base64
+						},
+					},
+				},
+			},
+			secretData:  map[string][]byte{},
+			expected:    map[string][]byte{},
+			expectError: true,
+		},
 	}
 
 	for _, tt := range tests {

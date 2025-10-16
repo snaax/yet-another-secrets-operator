@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -668,7 +669,18 @@ func (r *ASecretReconciler) processASecretData(ctx context.Context, aSecret *sec
 		}
 
 		if dataSource.Value != "" {
-			secretData[key] = []byte(dataSource.Value)
+			// For binary secrets, decode base64-encoded values
+			if aSecret.Spec.ValueType == "binary" {
+				decoded, err := base64.StdEncoding.DecodeString(dataSource.Value)
+				if err != nil {
+					log.Error(err, "Failed to decode base64 for binary secret key", "key", key)
+					return fmt.Errorf("failed to decode base64 for binary secret key %s: %w", key, err)
+				}
+				secretData[key] = decoded
+				log.V(1).Info("Decoded base64 binary value", "key", key, "originalSize", len(dataSource.Value), "decodedSize", len(decoded))
+			} else {
+				secretData[key] = []byte(dataSource.Value)
+			}
 			continue
 		}
 
